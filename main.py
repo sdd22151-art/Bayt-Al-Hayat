@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import psychology_router, neuroscience_router
+from fastapi.staticfiles import StaticFiles
+from app.routes import psychology_router, neuroscience_router, letter_router, astrology_router, comprehensive_router
+import os
 
 app = FastAPI(
     title="Mental Health Assessment API",
-    description="API for psychology and neuroscience assessments",
-    version="1.1.0",
+    description="API for psychology, neuroscience, letter science, astrology assessments, and comprehensive AI video generation",
+    version="1.4.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -20,22 +22,42 @@ app.add_middleware(
 
 app.include_router(psychology_router)
 app.include_router(neuroscience_router)
+app.include_router(letter_router)
+app.include_router(astrology_router)
+app.include_router(comprehensive_router)
+
+# Serve generated media files (audio/video)
+os.makedirs("videos", exist_ok=True)
+app.mount("/media", StaticFiles(directory="videos"), name="media")
 
 
 @app.get("/")
 async def root():
     """API root endpoint"""
     return {
-        "message": "Mental Health Assessment API",
-        "version": "1.1.0",
+        "message": "Mental Health Assessment API with AI Video Generation",
+        "version": "1.4.0",
         "endpoints": {
             "psychology": {
                 "get_questions": "GET /psychology",
-                "submit_answers": "POST /psychology/submit"
+                "submit_answers": "POST /psychology/submit",
+                "generate_video": "POST /psychology/generate-video"
             },
             "neuroscience": {
                 "get_questions": "GET /neuroscience/questions",
                 "submit_answers": "POST /neuroscience/submit"
+            },
+            "letter": {
+                "analyze": "POST /letter/analyze",
+                "dictionary": "GET /letter/dictionary"
+            },
+            "astrology": {
+                "analyze": "POST /astrology/analyze",
+                "generate_video": "POST /astrology/generate-video"
+            },
+            "comprehensive": {
+                "submit_all": "POST /comprehensive/submit",
+                "generate_video": "POST /comprehensive/generate-video"
             },
             "documentation": "/docs"
         }

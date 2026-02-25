@@ -35,3 +35,4 @@ class AssessmentResult(BaseModel):
     score: int
     level: str
     message: str
+    supportive_messages: list = []

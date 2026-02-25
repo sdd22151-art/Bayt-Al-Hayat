@@ -20,3 +20,9 @@ env/
 *.swo
 *~
 .DS_Store
+
+videos/
+test_videos/
+*.mp3
+*.mp4
+*.wav

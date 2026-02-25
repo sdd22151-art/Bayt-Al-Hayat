@@ -121,8 +121,35 @@ class PsychologyService:
         
         message = cls.LEVEL_MESSAGES[level]
         
+        supportive_messages = []
+        
+        if answers[0] >= 2:
+            supportive_messages.append(
+                "النوم الجيد أساس صحتك النفسية. حاول تهيئة بيئة نوم هادئة، "
+                "وتجنب الشاشات قبل النوم بساعة على الأقل."
+            )
+        
+        if answers[2] >= 2:
+            supportive_messages.append(
+                "القلق والتوتر طبيعيان، لكن يمكن التحكم بهما. "
+                "جرّب تمارين التنفس العميق أو المشي في الطبيعة."
+            )
+        
+        if answers[4] >= 2:
+            supportive_messages.append(
+                "التفكير الزائد مرهق. حاول كتابة أفكارك أو التحدث مع شخص تثق به. "
+                "لا تحمل كل شيء بمفردك."
+            )
+        
+        if answers[6] >= 2:
+            supportive_messages.append(
+                "نظرتك لنفسك مهمة جدًا. تذكر إنجازاتك ونقاط قوتك. "
+                "أنت أفضل مما تظن، وتستحق الحب والتقدير."
+            )
+        
         return AssessmentResult(
             score=score,
             level=level,
-            message=message
+            message=message,
+            supportive_messages=supportive_messages
         )
