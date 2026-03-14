@@ -30,7 +30,7 @@ async def register_user(user_data: UserRegisterRequest, background_tasks: Backgr
             detail="Email already registered"
         )
 
-    # Create new user with hashed password
+    # Create new user with hashed password (auto-verified)
     new_user = User(
         email=user_data.email,
         hashed_password=hash_password(user_data.password),
@@ -39,26 +39,16 @@ async def register_user(user_data: UserRegisterRequest, background_tasks: Backgr
         date_of_birth=user_data.date_of_birth,
         place_of_birth=user_data.place_of_birth,
         time_of_birth=user_data.time_of_birth,
+        profile_picture_url=user_data.profile_picture_url,
+        is_verified=True,
     )
 
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    # Generate 6-digit verification code
-    verification_code = create_verification_code()
-    
-    # Save code to user
-    new_user.verification_code = verification_code
-    new_user.verification_code_expires_at = datetime.utcnow() + timedelta(hours=24)
-    db.add(new_user)
-    await db.commit()
-
-    # Send verification email in background
-    background_tasks.add_task(send_verification_email, new_user.email, verification_code)
-
     return {
-        "message": "User registered successfully. Please check your email for the verification code.",
+        "message": "User registered successfully.",
         "user": new_user,
     }
 
