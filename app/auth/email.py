@@ -1,28 +1,38 @@
 import os
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# Robust boolean parsing for environment variables
-def get_env_bool(var_name: str, default: str) -> bool:
-    val = os.getenv(var_name, default).lower()
-    return val in ["true", "1", "t", "yes"]
+# Brevo HTTP API (works on Railway - no SMTP port blocking)
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+MAIL_FROM = os.getenv("MAIL_FROM", "sirahmedayman@gmail.com")
+MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "Abrag")
 
-# Debug log for Railway (without sensitive data)
-print(f"DEBUG: Email Config - Server: {os.getenv('MAIL_SERVER', 'smtp.gmail.com')}, Port: {os.getenv('MAIL_PORT', '465')}, SSL: {os.getenv('MAIL_SSL_TLS', 'True')}, STARTTLS: {os.getenv('MAIL_STARTTLS', 'False')}")
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME", ""),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
-    MAIL_FROM=os.getenv("MAIL_FROM", ""),
-    MAIL_PORT=int(os.getenv("MAIL_PORT", 465)),
-    MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
-    MAIL_STARTTLS=get_env_bool("MAIL_STARTTLS", "False"),
-    MAIL_SSL_TLS=get_env_bool("MAIL_SSL_TLS", "True"),
-    USE_CREDENTIALS=get_env_bool("USE_CREDENTIALS", "True"),
-    VALIDATE_CERTS=get_env_bool("VALIDATE_CERTS", "True"),
-)
+
+async def _send_email(to_email: str, subject: str, html_content: str):
+    """Send email using Brevo HTTP API (bypasses SMTP port blocking on Railway)"""
+    headers = {
+        "api-key": BREVO_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    payload = {
+        "sender": {"name": MAIL_FROM_NAME, "email": MAIL_FROM},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(BREVO_API_URL, json=payload, headers=headers)
+        if response.status_code not in [200, 201]:
+            print(f"Email send failed: {response.status_code} - {response.text}")
+            raise Exception(f"Failed to send email: {response.text}")
+        print(f"Email sent successfully to {to_email}")
 
 
 async def send_verification_email(email_to: str, token: str):
@@ -36,16 +46,7 @@ async def send_verification_email(email_to: str, token: str):
         <p>هذا الكود صالح لمدة 24 ساعة.</p>
     </div>
     """
-    
-    message = MessageSchema(
-        subject="تأكيد حسابك - Abrag",
-        recipients=[email_to],
-        body=html,
-        subtype=MessageType.html
-    )
-    
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    await _send_email(email_to, "تأكيد حسابك - Abrag", html)
 
 
 async def send_reset_password_email(email_to: str, token: str):
@@ -60,13 +61,4 @@ async def send_reset_password_email(email_to: str, token: str):
         <p>إذا لم تطلب هذا، يمكنك تجاهل هذه الرسالة.</p>
     </div>
     """
-    
-    message = MessageSchema(
-        subject="إعادة تعيين كلمة المرور - Abrag",
-        recipients=[email_to],
-        body=html,
-        subtype=MessageType.html
-    )
-    
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    await _send_email(email_to, "إعادة تعيين كلمة المرور - Abrag", html)
