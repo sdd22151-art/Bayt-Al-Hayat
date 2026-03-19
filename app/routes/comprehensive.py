@@ -6,6 +6,8 @@ from app.database import get_db
 from app.auth.models import User
 from app.auth.dependencies import get_current_user
 from app.models.history import AssessmentHistory
+from app.models.payment import PaymentRecord
+from sqlalchemy.future import select
 from ..models.comprehensive import ComprehensiveAnswers, ComprehensiveResult, ComprehensiveResultsInput
 from ..services.comprehensive_service import ComprehensiveService
 from ..services.ai_video_service import AIVideoService
@@ -59,6 +61,7 @@ async def submit_comprehensive_answers(
 @router.post("/generate-video", response_model=Dict[str, Any])
 async def generate_comprehensive_video(
     submission: ComprehensiveAnswers,
+    payment_session_id: str,
     model: str = "gpt4o",
     voice: str = "nova",
     current_user: User = Depends(get_current_user),
@@ -69,6 +72,7 @@ async def generate_comprehensive_video(
     
     Args:
         submission: Complete user data for all three assessments
+        payment_session_id: The Kashier session ID for the successful payment
         model: AI model for script generation (gpt4o, gpt4, gpt35)
         voice: Voice model for TTS (nova, alloy, shimmer)
     
@@ -76,9 +80,26 @@ async def generate_comprehensive_video(
         Dict with comprehensive analysis and video generation result
     
     Raises:
-        HTTPException: If generation fails
+        HTTPException: If payment is not verified or generation fails
     """
+    # 1. Verify Payment
     try:
+        payment_result = await db.execute(
+            select(PaymentRecord).where(
+                PaymentRecord.session_id == payment_session_id,
+                PaymentRecord.user_id == current_user.id,
+                PaymentRecord.status == "SUCCESS"
+            )
+        )
+        payment = payment_result.scalar_one_or_none()
+        
+        if not payment:
+            raise HTTPException(
+                status_code=402, 
+                detail="Payment required for AI video generation. Please complete the payment first."
+            )
+            
+        # 2. Proceed with Video Generation
         video_data = await ComprehensiveService.analyze_all(
             name=submission.name,
             psychology_answers=submission.psychology_answers,
@@ -108,7 +129,8 @@ async def generate_comprehensive_video(
         
         return {
             "analysis": video_data,
-            "video": video_result
+            "video": video_result,
+            "payment_order_id": payment.order_id
         }
         
     except Exception as e:
@@ -155,7 +177,7 @@ async def analyze_from_results(
         # Save to history
         history_entry = AssessmentHistory(
             user_id=current_user.id,
-            assessment_type="comprehensive_report",
+            assessment_type="comprehensive",
             input_data=submission.model_dump(),
             result_data=report
         )

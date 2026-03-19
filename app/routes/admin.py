@@ -9,12 +9,31 @@ from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
 from app.models.history import AssessmentHistory
+from app.models.payment import PaymentRecord
+from app.models.settings import SystemSetting
 
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
 
 # ─── Schemas ───────────────────────────────────────────────────────────────────
 class GrantAdminRequest(BaseModel):
     email: EmailStr
+
+class UpdateSettingRequest(BaseModel):
+    value: str
+
+class UpdatePricingRequest(BaseModel):
+    amount: float
+    currency: str = "EGP"
+
+class UpdateGatewayRequest(BaseModel):
+    status: Optional[str] = None
+    fees: Optional[str] = None
+    fees_type: Optional[str] = None
+    description: Optional[str] = None
+    merchant_id: Optional[str] = None
+    api_key: Optional[str] = None
+    secret_key: Optional[str] = None
+    mode: Optional[str] = None
 
 # ─── Admin Guard ───────────────────────────────────────────────────────────────
 async def get_admin_user(current_user: User = Depends(get_current_user)):
@@ -36,6 +55,11 @@ async def get_dashboard_stats(
     total_videos = (await db.execute(
         select(func.count(AssessmentHistory.id)).where(AssessmentHistory.video_url.isnot(None))
     )).scalar_one_or_none() or 0
+    
+    # Calculate Total Revenue (only SUCCESS payments)
+    total_revenue = (await db.execute(
+        select(func.sum(PaymentRecord.amount)).where(PaymentRecord.status == "SUCCESS")
+    )).scalar_one_or_none() or 0.0
     
     # Breakdown of Users by Age Demographic (for Pie Chart)
     users_dob_result = await db.execute(select(User.date_of_birth).where(User.date_of_birth.isnot(None)))
@@ -61,12 +85,14 @@ async def get_dashboard_stats(
     )
     all_assessments = users_with_assessments_result.all()
 
-    # Track how far each user got
+    # Journey Completion Rate (Unique users per stage, non-sequential)
     user_journey = {}
     for user_id, assessment_type in all_assessments:
         if user_id not in user_journey:
             user_journey[user_id] = set()
-        user_journey[user_id].add(assessment_type)
+        # Clean type name (lower case and strip)
+        ptype = assessment_type.lower().strip()
+        user_journey[user_id].add(ptype)
 
     journey_stages = {
         "Only Psychology": 0,
@@ -76,22 +102,50 @@ async def get_dashboard_stats(
         "Fully Completed": 0
     }
 
-    for user_id, completed_types in user_journey.items():
-        if "comprehensive" in completed_types:
-            journey_stages["Fully Completed"] += 1
-        elif "astrology" in completed_types:
-            journey_stages["Psychology + Neuro + Letter + Astrology"] += 1
-        elif "letter" in completed_types:
-            journey_stages["Psychology + Neuro + Letter"] += 1
-        elif "neuroscience" in completed_types:
-            journey_stages["Psychology + Neuroscience"] += 1
-        elif "psychology" in completed_types:
-            journey_stages["Only Psychology"] += 1
+    # REVISED FUNNEL: Count cumulative users reaching each stage in the defined path
+    # Even if they skip psychology, if they reached astrology, we often count them reaching that far
+    # but the previous buckets were misleadingly mutually exclusive.
+    # Let's count EXACTLY how many unique users have done EACH stage.
+    unique_stage_counts = {
+        "psychology": 0,
+        "neuroscience": 0,
+        "letter": 0,
+        "astrology": 0,
+        "comprehensive": 0
+    }
+    for completed_types in user_journey.values():
+        for s in unique_stage_counts.keys():
+            if s in completed_types:
+                unique_stage_counts[s] += 1
 
-    journey_breakdown = {k: v for k, v in journey_stages.items() if v > 0}
-    if not journey_breakdown:
-        journey_breakdown = {"No Data Yet": 1}
+    # Count exactly how many unique users have done EACH stage
+    unique_stage_counts = {
+        "Psychology": 0,
+        "Neuroscience": 0,
+        "Letter Science": 0,
+        "Astrology": 0,
+        "Comprehensive": 0
+    }
+    
+    # Map database type names to the display labels used in the buckets
+    type_map = {
+        "psychology": "Psychology",
+        "neuroscience": "Neuroscience",
+        "letter": "Letter Science",
+        "astrology": "Astrology",
+        "comprehensive": "Comprehensive"
+    }
 
+    for completed_types in user_journey.values():
+        for db_type, label in type_map.items():
+            if db_type in completed_types:
+                unique_stage_counts[label] += 1
+
+    # Return the direct counts. 
+    # NOTE: The frontend (app.js) was doing a cumulative sum, which we will now disable 
+    # to show absolute unique user counts per stage. 
+    # For now, we will use a specific key "absolute_counts" to signify this.
+    
     # New users in last 30 days
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     new_users_30d = (await db.execute(
@@ -104,8 +158,10 @@ async def get_dashboard_stats(
         "total_assessments": total_assessments,
         "total_videos": total_videos,
         "new_users_30d": new_users_30d,
+        "total_revenue": total_revenue,
         "breakdown": breakdown,
-        "journey": journey_breakdown
+        "journey": unique_stage_counts,
+        "is_absolute": True # Flag for frontend
     }
 
 
@@ -265,12 +321,12 @@ async def get_user_journeys(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_admin_user)
 ):
-    # Get all users who have at least one assessment
+    # Get all users who have at least one assessment, ordered by their LATEST assessment date
     users_result = await db.execute(
         select(User)
         .join(AssessmentHistory, AssessmentHistory.user_id == User.id)
-        .distinct()
-        .order_by(User.created_at.desc())
+        .group_by(User.id)
+        .order_by(func.max(AssessmentHistory.created_at).desc())
     )
     users = users_result.scalars().all()
 
@@ -301,7 +357,9 @@ async def get_user_journeys(
     for row in all_assessments:
         uid = str(row.user_id)
         if uid in user_data:
-            user_data[uid]["completed_stages"].add(row.assessment_type.lower())
+            # Normalize assessment type
+            clean_type = row.assessment_type.lower().strip()
+            user_data[uid]["completed_stages"].add(clean_type)
             if row.video_url:
                 user_data[uid]["has_video"] = True
             if not user_data[uid]["last_activity"] or row.created_at > user_data[uid]["last_activity"]:
@@ -400,6 +458,43 @@ async def delete_assessment(
     return {"message": "Assessment deleted successfully"}
 
 
+# ─── Payment Management (Admin) ────────────────────────────────────────────────
+
+@router.get("/payments", summary="Get all payment records")
+async def get_admin_payments(
+    skip: int = 0,
+    limit: int = 200,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    result = await db.execute(
+        select(PaymentRecord, User.email.label("user_email"), User.fullname)
+        .join(User, PaymentRecord.user_id == User.id)
+        .order_by(PaymentRecord.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    items = result.all()
+
+    return [
+        {
+            "id": str(item.PaymentRecord.id),
+            "user_id": str(item.PaymentRecord.user_id),
+            "user_email": item.user_email,
+            "user_name": item.fullname,
+            "order_id": item.PaymentRecord.order_id,
+            "session_id": item.PaymentRecord.session_id,
+            "service_type": item.PaymentRecord.service_type,
+            "amount": item.PaymentRecord.amount,
+            "currency": item.PaymentRecord.currency,
+            "status": item.PaymentRecord.status,
+            "payment_method": item.PaymentRecord.payment_method,
+            "created_at": item.PaymentRecord.created_at
+        }
+        for item in items
+    ]
+
+
 # ─── System Health ─────────────────────────────────────────────────────────────
 
 @router.get("/health", summary="System health and API key status")
@@ -491,3 +586,262 @@ async def revoke_admin(
     user.is_admin = False
     await db.commit()
     return {"message": f"❌ Admin access revoked for {user.fullname} ({user.email})"}
+
+
+# ─── Settings: Pricing ────────────────────────────────────────────────────────
+@router.get("/settings/pricing", summary="List pricing settings")
+async def get_pricing_settings(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    # Services we currently offer
+    services = [
+        "final_report_video"
+    ]
+    
+    # We query both price_* and currency_* keys
+    keys_to_fetch = [f"price_{s}" for s in services] + [f"currency_{s}" for s in services]
+    result = await db.execute(
+        select(SystemSetting).where(SystemSetting.key.in_(keys_to_fetch))
+    )
+    rows = {r.key: r.value for r in result.scalars().all()}
+    
+    return [
+        {
+            "service_type": service,
+            "amount": float(rows.get(f"price_{service}", "250.00")),  # Default Fallback
+            "currency": rows.get(f"currency_{service}", "EGP")       # Default Currency Fallback
+        }
+        for service in services
+    ]
+
+@router.put("/settings/pricing/{service_id}", summary="Update a price setting")
+async def update_pricing_setting(
+    service_id: str,
+    body: UpdatePricingRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    from datetime import datetime
+    try:
+        new_price = float(body.amount)
+        if new_price < 0:
+            raise ValueError()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid price amount. Must be a positive number.")
+
+    price_key = f"price_{service_id}"
+    currency_key = f"currency_{service_id}"
+    
+    # Save Price Amount
+    result_price = await db.execute(select(SystemSetting).where(SystemSetting.key == price_key))
+    setting_price = result_price.scalar_one_or_none()
+    
+    if not setting_price:
+        setting_price = SystemSetting(
+            key=price_key,
+            value=f"{new_price:.2f}",
+            group="pricing",
+            label=f"Price For: {service_id.replace('_', ' ').title()}",
+            description="Base price users pay for this service",
+            is_secret=False
+        )
+        db.add(setting_price)
+    else:
+        setting_price.value = f"{new_price:.2f}"
+        setting_price.updated_at = datetime.utcnow()
+
+    # Save Currency
+    new_currency = body.currency.strip().upper() or "EGP"
+    result_curr = await db.execute(select(SystemSetting).where(SystemSetting.key == currency_key))
+    setting_curr = result_curr.scalar_one_or_none()
+    
+    if not setting_curr:
+        setting_curr = SystemSetting(
+            key=currency_key,
+            value=new_currency,
+            group="pricing",
+            label=f"Currency For: {service_id.replace('_', ' ').title()}",
+            description="Currency used for this service price",
+            is_secret=False
+        )
+        db.add(setting_curr)
+    else:
+        setting_curr.value = new_currency
+        setting_curr.updated_at = datetime.utcnow()
+
+    await db.commit()
+    return {"message": f"✅ Pricing for {service_id.replace('_', ' ').title()} updated to {new_price:.2f} {new_currency}"}
+
+# ─── Settings: AI Models ────────────────────────────────────────────────────────
+
+def _mask(value: str, is_secret: bool) -> str:
+    """Return masked value for secret keys, showing only first 8 chars."""
+    if not is_secret or not value:
+        return value or ""
+    visible = value[:8]
+    return visible + "•" * min(20, max(4, len(value) - 8))
+
+
+@router.get("/settings/models", summary="List AI model settings")
+async def get_model_settings(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    result = await db.execute(
+        select(SystemSetting).where(SystemSetting.group == "ai_models").order_by(SystemSetting.key)
+    )
+    rows = result.scalars().all()
+
+    # Fallback to env for keys missing from DB
+    import os
+    return [
+        {
+            "key": r.key,
+            "label": r.label,
+            "description": r.description,
+            "is_secret": r.is_secret,
+            "value": _mask(r.value or os.getenv(r.key.upper(), ""), r.is_secret),
+            "has_value": bool(r.value),
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.put("/settings/models/{key}", summary="Update an AI model setting")
+async def update_model_setting(
+    key: str,
+    body: UpdateSettingRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    from datetime import datetime
+    result = await db.execute(
+        select(SystemSetting).where(SystemSetting.key == key, SystemSetting.group == "ai_models")
+    )
+    setting = result.scalar_one_or_none()
+    if not setting:
+        raise HTTPException(status_code=404, detail=f"Setting '{key}' not found")
+    setting.value = body.value
+    setting.updated_at = datetime.utcnow()
+    await db.commit()
+    return {"message": f"✅ '{setting.label}' updated successfully"}
+
+
+@router.post("/settings/models/{key}/test", summary="Test an AI model connection")
+async def test_model_setting(
+    key: str,
+    body: UpdateSettingRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    import httpx
+    val = body.value.strip()
+
+    try:
+        if key == "openai_api_key":
+            async with httpx.AsyncClient(timeout=5) as client:
+                res = await client.get("https://api.openai.com/v1/models", headers={"Authorization": f"Bearer {val}"})
+                res.raise_for_status()
+            return {"message": "OpenAI connection successful"}
+
+        elif key == "stability_api_key":
+            async with httpx.AsyncClient(timeout=5) as client:
+                res = await client.get("https://api.stability.ai/v1/engines/list", headers={"Authorization": f"Bearer {val}"})
+                res.raise_for_status()
+            return {"message": "Stability AI connection successful"}
+
+        elif key == "d_id_api_key":
+            # D-ID uses basic auth, key is usually "username:password"
+            # However some endpoints just accept basic auth with the full API key string if formatted correctly
+            auth_header = f"Basic {__import__('base64').b64encode(val.encode()).decode()}" if ":" in val else f"Bearer {val}"
+            async with httpx.AsyncClient(timeout=5) as client:
+                res = await client.get("https://api.d-id.com/credits", headers={"Authorization": auth_header})
+                res.raise_for_status()
+            return {"message": "D-ID connection successful"}
+
+        elif "key" in key or "secret" in key:
+            if len(val) > 8:
+                return {"message": f"Format OK (length: {len(val)}). Full automated test not available for this key."}
+            else:
+                raise HTTPException(status_code=400, detail="Key seems too short to be valid")
+
+        return {"message": "Value looks OK"}
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=400, detail=f"API rejected the key (Status {e.response.status_code})")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Network error testing key: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+
+# ─── Settings: Payment Gateways ────────────────────────────────────────────────
+
+@router.get("/settings/gateways", summary="List payment gateways")
+async def get_gateway_settings(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    result = await db.execute(
+        select(SystemSetting).where(SystemSetting.group == "payment_gateway")
+    )
+    rows = result.scalars().all()
+    data = {r.key: r for r in rows}
+
+    def gv(k):
+        """Get gateway value, masked if secret."""
+        r = data.get(k)
+        if not r:
+            return ""
+        return _mask(r.value or "", r.is_secret)
+
+    return [
+        {
+            "id": "kashier",
+            "name": "Kashier",
+            "status": data.get("kashier_status", type("o", (), {"value": "inactive"})()).value,
+            "fees": gv("kashier_fees"),
+            "fees_type": gv("kashier_fees_type"),
+            "description": gv("kashier_description"),
+            "merchant_id": gv("kashier_merchant_id"),
+            "api_key": gv("kashier_api_key"),
+            "secret_key": gv("kashier_secret_key"),
+            "mode": gv("kashier_mode"),
+        }
+    ]
+
+
+@router.put("/settings/gateways/kashier", summary="Update Kashier gateway settings")
+async def update_kashier_settings(
+    body: UpdateGatewayRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    from datetime import datetime
+
+    field_map = {
+        "status": "kashier_status",
+        "fees": "kashier_fees",
+        "fees_type": "kashier_fees_type",
+        "description": "kashier_description",
+        "merchant_id": "kashier_merchant_id",
+        "api_key": "kashier_api_key",
+        "secret_key": "kashier_secret_key",
+        "mode": "kashier_mode",
+    }
+
+    updated = []
+    for field, db_key in field_map.items():
+        val = getattr(body, field)
+        if val is not None:
+            result = await db.execute(select(SystemSetting).where(SystemSetting.key == db_key))
+            setting = result.scalar_one_or_none()
+            if setting:
+                setting.value = val
+                setting.updated_at = datetime.utcnow()
+                updated.append(db_key)
+
+    await db.commit()
+    return {"message": f"✅ Kashier gateway updated ({len(updated)} fields)"}

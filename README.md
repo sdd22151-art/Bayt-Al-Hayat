@@ -1,294 +1,156 @@
-# Abrag — Mental Wellness & Astrology API
-
-> A powerful FastAPI backend that combines **Psychology**, **Neuroscience**, **Astrology**, and **Letter Science** to deliver personalized AI-generated insights and videos.
-
----
-
-## Features
-
-- **Letter Science** — Analyze governing letters based on name & age
-- **Psychology Assessment** — 7-question mental health evaluation
-- **Neuroscience Assessment** — Nervous system pattern detection
-- **Astrology Analysis** — Real-time planetary data via Free Astrology API
-- **AI Video Generation** — GPT-4o script → TTS audio → Stability AI visuals → FFmpeg video
-- **Comprehensive Analysis** — All four sciences combined in one request
+<div align="center">
+  <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  
+  <h1>🔮 Abrag — Mental Wellness & Astrology App</h1>
+  <p>A comprehensive backend for AI-powered astrology, psychology, and neuroscience analysis with a fully-featured Admin Dashboard and payment integration.</p>
+</div>
 
 ---
 
-## ️ Tech Stack
+## ✨ Features
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | FastAPI |
-| Server | Uvicorn |
-| AI / LLM | OpenAI GPT-4o |
-| TTS | OpenAI TTS-1-HD |
-| Image Gen | Stability AI Ultra |
-| Video | FFmpeg |
-| Astrology | Free Astrology API |
-| Validation | Pydantic v2 |
+### 🧠 Core Sciences Analysis
+- **Psychology:** 7-question mental health evaluation mapped to deep psychological profiles.
+- **Neuroscience:** Analysis of nervous system responses (Fight, Flight, Freeze, Fawn).
+- **Astrology:** Real-time planetary placements and insights.
+- **Letter Science:** Ancient Arabic name-number (Abjad) analysis combined with age cycles.
+
+### 🎥 AI Video Generation
+- Generates dynamic narration scripts via **GPT-4o**.
+- Text-to-Speech (TTS) via **OpenAI HD Voices**.
+- Dynamic, segment-specific imagery generated via **Stability AI**.
+- Automatic montage stitching with Ken Burns effects via **FFmpeg**.
+
+### 🛠️ Complete Admin Dashboard
+- **Analytics:** Key Performance Indicators (KPIs) and user journey tracking.
+- **User Management:** View, ban, or delete users. Check their assessment history.
+- **Payment Gateway:** Kashier integration with a dynamic transaction dashboard.
+- **System Settings:** Update API keys, manage gateway modes, and toggle admin access securely from the UI.
+- **Notification System:** Push and in-app notifications targeting all or specific users with read tracking.
+
+### 🔐 Security & Auth
+- JWT based authentication for Users and Admins.
+- Secure standard password hashing (bcrypt).
+- Cloudinary integration for user avatars.
+- Rate-limiting enabled via `slowapi` to prevent abuse.
 
 ---
 
-## Getting Started
+## 🚀 Tech Stack
 
-### Prerequisites
+- **Backend:** Python 3.12, FastAPI, Uvicorn, SQLAlchemy (AsyncPG)
+- **Database:** PostgreSQL (Neon DB recommended)
+- **GenAI APIs:** OpenAI (GPT-4o, TTS), Stability AI 
+- **Media Processing:** FFmpeg, Cloudinary
+- **Emails:** Brevo HTTP API
+- **Deployment:** Railway / Docker / Nixpacks
 
-- Python 3.11+
-- FFmpeg installed on the system
-- API keys (see [Environment Variables](#-environment-variables))
+---
 
-### Installation
+## 📦 Local Setup & Installation
 
+### 1. Prerequisites
+- Python 3.12+
+- PostgreSQL database
+- FFmpeg installed locally (`brew install ffmpeg` on Mac, `apt install ffmpeg` on Linux)
+
+### 2. Clone the repository
 ```bash
-# Clone the repo
 git clone https://github.com/your-org/abrag.git
 cd abrag
+```
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate # On Windows: venv\Scripts\activate
+### 3. Setup Virtual Environment
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-# Install dependencies
+### 4. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### Run the Server
+### 5. Environment Variables
+Create a `.env` file in the root. Refer to `.env.example` if available, and ensure you have at minimum:
+```env
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@host/dbname
 
+# Security
+SECRET_KEY=your_super_secret_key
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# APIs
+OPENAI_API_KEY=sk-...
+STABILITY_API_KEY=sk-...
+
+# 3rd Party
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+BREVO_API_KEY=...
+KASHIER_API_KEY=...
+KASHIER_MERCHANT_ID=...
+```
+
+### 6. Create Initial Admin
+To access the Dashboard, you need an admin user:
+```bash
+python create_admin.py
+```
+*(This will create `admin@abrag.com` with password `123456`)*
+
+### 7. Run the Server
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
-
-> API will be live at `http://localhost:8000` 
-> Swagger docs at `http://localhost:8000/docs`
-
----
-
-## Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-OPENAI_API_KEY=sk-...
-STABILITY_API_KEY=sk-...
-D_ID_API_KEY=...
-ELEVENLABS_API_KEY=... # optional
-```
+- **API Docs (Swagger):** `http://localhost:8000/docs`
+- **Admin Dashboard:** `http://localhost:8000/admin-ui/`
 
 ---
 
-## API Endpoints
+## 🚂 Deployment (Railway)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | API info |
-| `GET` | `/health` | Health check |
-| `POST` | `/letter/analyze` | Letter science analysis |
-| `GET` | `/letter/dictionary` | Full guidance dictionary |
-| `POST` | `/astrology/analyze` | Daily horoscope analysis |
-| `POST` | `/astrology/generate-video` | AI astrology video |
-| `GET` | `/astrology/voices` | Available TTS voices |
-| `GET` | `/astrology/models` | Available AI models |
-| `GET` | `/psychology` | Get 7 psychology questions |
-| `POST` | `/psychology/submit` | Submit answers & get result |
-| `POST` | `/psychology/generate-video` | AI psychology video |
-| `POST` | `/comprehensive/submit` | Full analysis (no video) |
-| `POST` | `/comprehensive/generate-video` | Full analysis + AI video |
+This repository is optimized for deployment on **Railway**. All configuration files (`railway.toml`, `Procfile`, `runtime.txt`) are already included.
+
+### Steps to Deploy:
+1. Push this repository to your GitHub account.
+2. Go to [Railway.app](https://railway.app/).
+3. Click **New Project** -> **Deploy from GitHub repo**.
+4. Select your repository.
+5. In the Railway project dashboard, go to **Variables** and paste the contents of your `.env` file (Make sure to remove the `+asyncpg` from Railway's default database string if connecting a Railway Postgres plugin, or just copy the raw string directly into `DATABASE_URL`).
+6. Railway will automatically detect the Python environment via `nixpacks` and install FFmpeg automatically.
+7. Once deployed, generate a public domain in Railway settings.
+8. **Done!**
 
 ---
 
-## Request & Response Examples
+## 📂 Project Structure
 
-### Letter Science
-```http
-POST /letter/analyze
-Content-Type: application/json
-
-{
-"name": "Ahmed Mohamed",
-"age": 25
-}
-```
-```json
-{
-"name": "Ahmed Mohamed",
-"age": 25,
-"letters_count": 12,
-"stage": 2,
-"governing_letter": "ح",
-"guidance_type": "spiritual",
-"guidance": "Focus on spiritual connection",
-"is_dependent": false
-}
-```
-
----
-
-### Comprehensive Analysis
-```http
-POST /comprehensive/submit
-Content-Type: application/json
-
-{
-"name": "Ahmed",
-"psychology_answers": [1, 2, 1, 3, 2, 1, 2],
-"neuroscience_answers": ["A", "B", "A", "C", "D", "A", "B", "C", "A"],
-"birth_date": "1990-05-15",
-"birth_time": "14:30",
-"birth_place": "Cairo",
-"gender": "male",
-"day_type": "today"
-}
-```
-```json
-{
-"psychology": { "score": 12, "level": "...", "message": "..." },
-"neuroscience": { "dominant": "Fight", "secondary": "Fawn", "description": "..." },
-"astrology": { "sun_sign": "Taurus", "ascendant": "Sagittarius", "advice": "..." }
-}
-```
-
----
-
-### AI Video Generation
-```http
-POST /comprehensive/generate-video?model=gpt4o&voice=nova
-Content-Type: application/json
-
-{
-"name": "Ahmed",
-"psychology_answers": [1, 2, 1, 3, 2, 1, 2],
-"neuroscience_answers": ["A", "B", "A", "C", "D", "A", "B", "C", "A"],
-"birth_date": "1990-05-15",
-"day_type": "today"
-}
-```
-```json
-{
-"analysis": { ... },
-"video": {
-"status": "success",
-"audio_path": "videos/comprehensive/TIMESTAMP/audio_nova.mp3",
-"video_path": "videos/comprehensive/TIMESTAMP/video.mp4"
-}
-}
-```
-
-> ⏱️ Video generation takes **5–15 minutes**. Plan your UX accordingly (show a loading screen).
-
----
-
-## Video Generation Pipeline
-
-```
-User Data
-│
-▼
-GPT-4o generates Arabic script
-│
-▼
-OpenAI TTS converts script to audio (.mp3)
-│
-▼
-GPT-4o segments script into emotional scenes
-│
-▼
-Stability AI generates an image per scene
-│
-▼
-FFmpeg applies Ken Burns effects + crossfades
-│
-▼
-Final video (.mp4) with narration overlay
-```
-
----
-
-## Project Structure
-
-```
+```text
 abrag/
-├── main.py # FastAPI app entry point
-├── requirements.txt
-├── .env # API keys (not committed)
+├── main.py                 # FastAPI Application Entry
+├── create_admin.py         # Utility to seed the database with an Admin
+├── requirements.txt        # Python packages
+├── railway.toml / Procfile # Deployment instructions
+├── dashboard-admin/        # Static HTML/JS files for the Admin UI
+├── videos/                 # Temporarily storage for generated videos
 ├── app/
-│ ├── models/ # Pydantic request/response models
-│ │ ├── astrology.py
-│ │ ├── comprehensive.py
-│ │ ├── letter.py
-│ │ ├── neuroscience.py
-│ │ └── psychology.py
-│ ├── routes/ # API route handlers
-│ │ ├── astrology.py
-│ │ ├── comprehensive.py
-│ │ ├── letter.py
-│ │ ├── neuroscience.py
-│ │ └── psychology.py
-│ └── services/ # Business logic
-│ ├── ai_video_service.py
-│ ├── astrology_service.py
-│ ├── comprehensive_service.py
-│ ├── letter_service.py
-│ ├── neuroscience_service.py
-│ ├── psychology_service.py
-│ └── video_analytics.py
-├── videos/ # Generated audio/video output
-└── cache/ # Cached GPT scripts
+│   ├── auth/               # User registration, login, JWT logic
+│   ├── database.py         # SQLAlchemy Setup & DB Init
+│   ├── models/             # SQLAlchemy DB schemas
+│   ├── routes/             # FastAPI Route Definitions
+│   ├── schemas/            # Pydantic validation schemas
+│   └── services/           # Heavy lifting (AI logic, Video Gen, DB ops)
 ```
-
----
-
-## Available Voices
-
-| Voice | Gender |
-|-------|--------|
-| `nova` | Female |
-| `shimmer` | Female |
-| `alloy` | Neutral |
-| `fable` | Neutral |
-| `echo` | Male |
-| `onyx` | Male |
-
----
-
-## Deployment
-
-The project is configured for **Railway** deployment:
-
-```toml
-# railway.toml
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
-```
-
-```
-# Procfile
-web: uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
----
-
-## CORS
-
-All origins are currently allowed for development:
-
-```python
-allow_origins=["*"]
-```
-
-> ️ Restrict this to your Flutter app's domain in production.
-
----
-
-## License
-
-MIT License — feel free to use and modify.
 
 ---
 
 <div align="center">
-<strong>Built with FastAPI · Powered by OpenAI · Deployed on Railway</strong>
+  <p><i>Developed with ❤️ for the future of mental well-being and personal insight.</i></p>
 </div>

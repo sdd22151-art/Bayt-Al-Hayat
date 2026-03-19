@@ -6,6 +6,11 @@ import os
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "❌ DATABASE_URL environment variable is required but not set. "
+        "Please configure it in your .env file."
+    )
 
 engine = create_async_engine(
     DATABASE_URL,
@@ -31,6 +36,9 @@ async def init_db():
     # Import models here to avoid circular imports
     from app.auth.models import User
     from app.models.history import AssessmentHistory
-    
+    from app.models.payment import PaymentRecord
+    from app.models.settings import SystemSetting
+    from app.models.notification import Notification, UserNotificationRead, UserDeviceToken
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

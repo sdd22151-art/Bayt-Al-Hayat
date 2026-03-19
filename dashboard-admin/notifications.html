@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications - Abrag Admin</title>
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Notification Page Styles ──────────────────────────────────────────── */
+    .notif-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .notif-kpi-card {
+      background: var(--bg-surface);
+      border-radius: 10px;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border-color);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .notif-kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .notif-kpi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+    }
+
+    .notif-kpi-info h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+
+    .notif-kpi-info p {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    /* ── Compose Section ─────────────────────────────────────────────────── */
+    .compose-card {
+      background: var(--bg-surface);
+      border-radius: 10px;
+      padding: 1.75rem;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      margin-bottom: 2rem;
+    }
+
+    .compose-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .compose-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .compose-full {
+      margin-bottom: 1rem;
+    }
+
+    .compose-card label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .compose-card input,
+    .compose-card textarea,
+    .compose-card select {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.875rem;
+      font-family: var(--font-family);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-body);
+      color: var(--text-main);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .compose-card input:focus,
+    .compose-card textarea:focus,
+    .compose-card select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(92, 109, 250, 0.12);
+    }
+
+    .compose-card textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .compose-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-send {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #5c6dfa, #7c88ff);
+      color: white;
+      box-shadow: 0 2px 8px rgba(92, 109, 250, 0.3);
+    }
+
+    .btn-send:hover {
+      background: linear-gradient(135deg, #4e5ee6, #6d79f0);
+      box-shadow: 0 4px 12px rgba(92, 109, 250, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-clear {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      background: var(--bg-body);
+      color: var(--text-main);
+    }
+
+    #targetUserField {
+      display: none;
+    }
+
+    #targetUserField.show {
+      display: block;
+    }
+
+    /* ── Notifications List ──────────────────────────────────────────────── */
+    .notif-list-card {
+      background: var(--bg-surface);
+      border-radius: 10px;
+      padding: 1.5rem;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+    }
+
+    .notif-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .notif-list-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .notif-list-header .notif-count {
+      font-size: 0.75rem;
+      background: var(--primary-color);
+      color: white;
+      padding: 2px 10px;
+      border-radius: 50px;
+      font-weight: 600;
+    }
+
+    .notif-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 0.75rem;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .notif-item:hover {
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 8px rgba(92, 109, 250, 0.08);
+    }
+
+    .notif-item.inactive {
+      opacity: 0.5;
+    }
+
+    .notif-type-icon {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .notif-type-general {
+      background: rgba(92, 109, 250, 0.12);
+      color: #5c6dfa;
+    }
+
+    .notif-type-tip {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+    }
+
+    .notif-type-reminder {
+      background: rgba(249, 115, 22, 0.12);
+      color: #f97316;
+    }
+
+    .notif-type-update {
+      background: rgba(14, 165, 233, 0.12);
+      color: #0ea5e9;
+    }
+
+    .notif-type-promo {
+      background: rgba(168, 85, 247, 0.12);
+      color: #a855f7;
+    }
+
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notif-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .notif-body {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .notif-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.725rem;
+      color: var(--text-muted);
+    }
+
+    .notif-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .notif-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 50px;
+    }
+
+    .badge-all {
+      background: rgba(92, 109, 250, 0.1);
+      color: #5c6dfa;
+    }
+
+    .badge-specific {
+      background: rgba(249, 115, 22, 0.1);
+      color: #f97316;
+    }
+
+    .badge-active {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+
+    .badge-inactive {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    .notif-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .notif-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-body);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .notif-action-btn:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .notif-action-btn.delete:hover {
+      border-color: #ef4444;
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .notif-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+
+    .notif-empty i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    .notif-empty p {
+      font-size: 0.9rem;
+    }
+
+    /* Read Progress Bar */
+    .read-progress {
+      height: 4px;
+      background: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+      width: 80px;
+    }
+
+    .read-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #5c6dfa, #7c88ff);
+      transition: width 0.3s;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: white;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .toast-error {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    @media (max-width: 768px) {
+      .compose-row {
+        grid-template-columns: 1fr;
+      }
+
+      .notif-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .notif-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">ABRAG</div>
+      <nav class="nav-menu">
+        <a href="dashboard.html" class="nav-item"><i class='bx bx-desktop'></i> Dashboard</a>
+        <div class="nav-divider"></div>
+        <a href="users.html" class="nav-item"><i class='bx bx-group'></i> Users</a>
+        <a href="assessments.html" class="nav-item"><i class='bx bx-book-open'></i> Assessments</a>
+        <a href="videos.html" class="nav-item"><i class='bx bx-video'></i> Videos</a>
+        <a href="payments.html" class="nav-item"><i class='bx bx-dollar-circle'></i> Payments</a>
+        <a href="notifications.html" class="nav-item active"><i class='bx bx-bell'></i> Notifications</a>
+        <div class="nav-divider"></div>
+        <a href="settings.html" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
+        <div class="nav-divider"></div>
+        <a href="#" class="nav-item nav-logout" onclick="logout()"><i class='bx bx-log-out'></i> Logout</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-left">
+          <button class="btn-icon" id="toggleSidebar"><i class='bx bx-menu'></i></button>
+        </div>
+        <div class="header-right">
+          <button class="btn-icon" id="toggleTheme" title="Toggle Dark Mode"><i class='bx bx-moon'></i></button>
+          <button class="btn-icon" id="toggleFullscreen" title="Fullscreen"><i class='bx bx-fullscreen'></i></button>
+          <div class="user-profile">
+            <div class="avatar"><i class='bx bx-user'></i></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-body">
+
+        <div class="dashboard-header-info">
+          <div class="breadcrumb"><strong>Notifications</strong> <span>|</span> Manage & Send</div>
+          <div class="date-time-display" id="currentDateTime">--</div>
+        </div>
+
+        <div class="welcome-banner" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
+          <div class="welcome-banner-text">
+            <h1>🔔 Notification Center</h1>
+            <p>Create, manage, and send notifications to your users</p>
+          </div>
+          <div class="banner-icon"><i class='bx bx-bell'></i></div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="notif-kpi-grid">
+          <div class="notif-kpi-card">
+            <div class="notif-kpi-icon" style="background: rgba(92, 109, 250, 0.12); color: #5c6dfa;">
+              <i class='bx bx-bell'></i>
+            </div>
+            <div class="notif-kpi-info">
+              <h3 id="kpiTotal">—</h3>
+              <p>Total Sent</p>
+            </div>
+          </div>
+          <div class="notif-kpi-card">
+            <div class="notif-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+              <i class='bx bx-check-circle'></i>
+            </div>
+            <div class="notif-kpi-info">
+              <h3 id="kpiActive">—</h3>
+              <p>Active</p>
+            </div>
+          </div>
+          <div class="notif-kpi-card">
+            <div class="notif-kpi-icon" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9;">
+              <i class='bx bx-show'></i>
+            </div>
+            <div class="notif-kpi-info">
+              <h3 id="kpiReads">—</h3>
+              <p>Total Reads</p>
+            </div>
+          </div>
+          <div class="notif-kpi-card">
+            <div class="notif-kpi-icon" style="background: rgba(168, 85, 247, 0.12); color: #a855f7;">
+              <i class='bx bx-devices'></i>
+            </div>
+            <div class="notif-kpi-info">
+              <h3 id="kpiDevices">—</h3>
+              <p>Registered Devices</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compose Notification -->
+        <div class="compose-card">
+          <h3><i class='bx bx-edit'></i> Compose Notification</h3>
+
+          <div class="compose-row">
+            <div>
+              <label>Title</label>
+              <input type="text" id="notifTitle" placeholder="e.g. Daily Wellness Tip 🌟" maxlength="200" />
+            </div>
+            <div>
+              <label>Type</label>
+              <select id="notifType">
+                <option value="general">📋 General</option>
+                <option value="tip">💡 Tip</option>
+                <option value="reminder">⏰ Reminder</option>
+                <option value="update">🆕 Update</option>
+                <option value="promo">🎉 Promo</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="compose-full">
+            <label>Message Body</label>
+            <textarea id="notifBody" placeholder="Write your notification message here..."></textarea>
+          </div>
+
+          <div class="compose-row">
+            <div>
+              <label>Send To</label>
+              <select id="notifTarget" onchange="toggleTargetUser()">
+                <option value="all">🌍 All Users</option>
+                <option value="specific">👤 Specific User</option>
+              </select>
+            </div>
+            <div id="targetUserField">
+              <label>User ID</label>
+              <input type="text" id="notifTargetUserId" placeholder="Paste user UUID here..." />
+            </div>
+          </div>
+
+          <div class="compose-actions">
+            <button class="btn-send" onclick="sendNotification()" id="btnSend">
+              <i class='bx bx-send'></i> Send Notification
+            </button>
+            <button class="btn-clear" onclick="clearForm()">
+              <i class='bx bx-eraser'></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="notif-list-card">
+          <div class="notif-list-header">
+            <h3><i class='bx bx-list-ul'></i> Sent Notifications <span class="notif-count" id="notifCountBadge">0</span></h3>
+          </div>
+          <div id="notifList">
+            <div class="notif-empty">
+              <i class='bx bx-loader-alt bx-spin'></i>
+              <p>Loading notifications...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js?v=2"></script>
+  <script>
+    // ── Page Init ─────────────────────────────────────────────────────────────
+    requireAuth();
+    loadNotifications();
+    loadNotifStats();
+
+    // ── Show/hide target user field ───────────────────────────────────────────
+    function toggleTargetUser() {
+      const target = document.getElementById('notifTarget').value;
+      const field = document.getElementById('targetUserField');
+      if (target === 'specific') {
+        field.classList.add('show');
+      } else {
+        field.classList.remove('show');
+      }
+    }
+
+    // ── Toast helper ──────────────────────────────────────────────────────────
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast toast-${type} show`;
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // ── Clear form ────────────────────────────────────────────────────────────
+    function clearForm() {
+      document.getElementById('notifTitle').value = '';
+      document.getElementById('notifBody').value = '';
+      document.getElementById('notifType').value = 'general';
+      document.getElementById('notifTarget').value = 'all';
+      document.getElementById('notifTargetUserId').value = '';
+      document.getElementById('targetUserField').classList.remove('show');
+    }
+
+    // ── Send Notification ─────────────────────────────────────────────────────
+    async function sendNotification() {
+      const title = document.getElementById('notifTitle').value.trim();
+      const body = document.getElementById('notifBody').value.trim();
+      const type = document.getElementById('notifType').value;
+      const target = document.getElementById('notifTarget').value;
+      const targetUserId = document.getElementById('notifTargetUserId').value.trim();
+
+      if (!title || !body) {
+        showToast('Please fill in title and message body', 'error');
+        return;
+      }
+
+      if (target === 'specific' && !targetUserId) {
+        showToast('Please enter the target User ID', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnSend');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Sending...';
+
+      try {
+        const payload = { title, body, type, target };
+        if (target === 'specific') payload.target_user_id = targetUserId;
+
+        const res = await apiFetch('/admin/notifications', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        if (!res) return;
+
+        if (res.ok) {
+          const data = await res.json();
+          showToast(data.message || 'Notification sent!', 'success');
+          clearForm();
+          loadNotifications();
+          loadNotifStats();
+        } else {
+          const err = await res.json();
+          showToast(err.detail || 'Failed to send notification', 'error');
+        }
+      } catch (e) {
+        showToast('Network error', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bx bx-send"></i> Send Notification';
+      }
+    }
+
+    // ── Load Stats ────────────────────────────────────────────────────────────
+    async function loadNotifStats() {
+      try {
+        const res = await apiFetch('/admin/notifications/stats');
+        if (!res) return;
+        const stats = await res.json();
+
+        document.getElementById('kpiTotal').textContent = stats.total_notifications.toLocaleString();
+        document.getElementById('kpiActive').textContent = stats.active_notifications.toLocaleString();
+        document.getElementById('kpiReads').textContent = stats.total_reads.toLocaleString();
+        document.getElementById('kpiDevices').textContent = stats.registered_devices.toLocaleString();
+      } catch (e) {
+        console.error('Stats load error:', e);
+      }
+    }
+
+    // ── Load Notifications List ───────────────────────────────────────────────
+    async function loadNotifications() {
+      try {
+        const res = await apiFetch('/admin/notifications?limit=100');
+        if (!res) return;
+        const notifications = await res.json();
+
+        const container = document.getElementById('notifList');
+        const countBadge = document.getElementById('notifCountBadge');
+        countBadge.textContent = notifications.length;
+
+        if (notifications.length === 0) {
+          container.innerHTML = `
+            <div class="notif-empty">
+              <i class='bx bx-bell-off'></i>
+              <p>No notifications yet. Create your first one above!</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = notifications.map(n => {
+          const typeIcons = {
+            general: 'bx-bell',
+            tip: 'bx-bulb',
+            reminder: 'bx-time-five',
+            update: 'bx-rocket',
+            promo: 'bx-gift'
+          };
+
+          const icon = typeIcons[n.type] || 'bx-bell';
+          const readPercent = n.total_audience > 0 ? Math.round((n.read_count / n.total_audience) * 100) : 0;
+          const date = new Date(n.created_at);
+          const timeAgo = getTimeAgo(date);
+
+          return `
+            <div class="notif-item ${n.is_active ? '' : 'inactive'}" id="notif-${n.id}">
+              <div class="notif-type-icon notif-type-${n.type}">
+                <i class='bx ${icon}'></i>
+              </div>
+              <div class="notif-content">
+                <div class="notif-title">${escapeHtml(n.title)}</div>
+                <div class="notif-body">${escapeHtml(n.body)}</div>
+                <div class="notif-meta">
+                  <span class="notif-meta-item"><i class='bx bx-time'></i> ${timeAgo}</span>
+                  <span class="notif-badge badge-${n.target}">
+                    <i class='bx ${n.target === 'all' ? 'bx-globe' : 'bx-user'}'></i>&nbsp;${n.target === 'all' ? 'All Users' : 'Specific'}
+                  </span>
+                  <span class="notif-badge ${n.is_active ? 'badge-active' : 'badge-inactive'}">
+                    ${n.is_active ? '● Active' : '○ Inactive'}
+                  </span>
+                  <span class="notif-meta-item">
+                    <i class='bx bx-show'></i> ${n.read_count}/${n.total_audience}
+                    <div class="read-progress"><div class="read-progress-fill" style="width: ${readPercent}%"></div></div>
+                  </span>
+                  <span class="notif-meta-item"><i class='bx bx-user'></i> ${escapeHtml(n.created_by_name)}</span>
+                </div>
+              </div>
+              <div class="notif-actions">
+                <button class="notif-action-btn" onclick="toggleNotif('${n.id}')" title="${n.is_active ? 'Deactivate' : 'Activate'}">
+                  <i class='bx ${n.is_active ? 'bx-hide' : 'bx-show'}'></i>
+                </button>
+                <button class="notif-action-btn delete" onclick="deleteNotif('${n.id}')" title="Delete">
+                  <i class='bx bx-trash'></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (e) {
+        console.error('Load notifications error:', e);
+      }
+    }
+
+    // ── Toggle Notification ───────────────────────────────────────────────────
+    async function toggleNotif(id) {
+      try {
+        const res = await apiFetch(`/admin/notifications/${id}/toggle`, { method: 'PATCH' });
+        if (!res) return;
+        if (res.ok) {
+          const data = await res.json();
+          showToast(data.message, 'success');
+          loadNotifications();
+          loadNotifStats();
+        }
+      } catch (e) {
+        showToast('Failed to toggle notification', 'error');
+      }
+    }
+
+    // ── Delete Notification ───────────────────────────────────────────────────
+    async function deleteNotif(id) {
+      if (!confirm('Are you sure you want to delete this notification?')) return;
+
+      try {
+        const res = await apiFetch(`/admin/notifications/${id}`, { method: 'DELETE' });
+        if (!res) return;
+        if (res.ok) {
+          showToast('Notification deleted', 'success');
+          // Animate removal
+          const el = document.getElementById(`notif-${id}`);
+          if (el) {
+            el.style.transition = 'all 0.3s ease';
+            el.style.opacity = '0';
+            el.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+              loadNotifications();
+              loadNotifStats();
+            }, 300);
+          }
+        }
+      } catch (e) {
+        showToast('Failed to delete notification', 'error');
+      }
+    }
+
+    // ── Utility: Time Ago ─────────────────────────────────────────────────────
+    function getTimeAgo(date) {
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // ── Utility: Escape HTML ──────────────────────────────────────────────────
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+  </script>
+
+</body>
+
+</html>

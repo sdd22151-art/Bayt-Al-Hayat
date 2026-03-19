@@ -82,8 +82,10 @@
         <a href="users.html" class="nav-item"><i class='bx bx-group'></i> Users</a>
         <a href="assessments.html" class="nav-item active"><i class='bx bx-book-open'></i> Assessments</a>
         <a href="videos.html" class="nav-item"><i class='bx bx-video'></i> Videos</a>
+        <a href="payments.html" class="nav-item"><i class='bx bx-dollar-circle'></i> Payments</a>
+        <a href="notifications.html" class="nav-item"><i class='bx bx-bell'></i> Notifications</a>
         <div class="nav-divider"></div>
-        <a href="settings.html" class="nav-item"><i class='bx bx-server'></i> System Health</a>
+        <a href="settings.html" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
         <div class="nav-divider"></div>
         <a href="#" class="nav-item nav-logout" onclick="logout()"><i class='bx bx-log-out'></i> Logout</a>
       </nav>
@@ -207,11 +209,11 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
   <script>
-    const STAGES = ['psychology', 'neuroscience', 'letter', 'astrology', 'comprehensive'];
-    const STAGE_ICONS = { psychology: 'bx-brain', neuroscience: 'bx-network-chart', letter: 'bx-text', astrology: 'bx-star', comprehensive: 'bx-trophy' };
-    const STAGE_LABELS = { psychology: 'Psychology', neuroscience: 'Neuroscience', letter: 'Letter', astrology: 'Astrology', comprehensive: 'Comprehensive' };
+    const STAGES = ['letter', 'astrology', 'psychology', 'neuroscience', 'comprehensive'];
+    const STAGE_ICONS = { letter: 'bx-text', astrology: 'bx-star', psychology: 'bx-brain', neuroscience: 'bx-network-chart', comprehensive: 'bx-trophy' };
+    const STAGE_LABELS = { letter: 'Letter', astrology: 'Astrology', psychology: 'Psychology', neuroscience: 'Neuroscience', comprehensive: 'Comprehensive' };
 
     let allRecords = [];
     let currentTab = 'journey';

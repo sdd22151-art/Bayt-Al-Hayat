@@ -1,6 +1,6 @@
 // ─── Global Config ─────────────────────────────────────────────────────────────
-window.API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-  ? 'http://localhost:8000' 
+window.API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
   : window.location.origin; // In production (Railway), frontend and backend share the same domain
 
 // ─── Shared API Fetch Helper ───────────────────────────────────────────────────
@@ -110,7 +110,14 @@ async function loadDashboard() {
 
     // Update KPI Cards
     const cards = document.querySelectorAll('.kpi-card h3');
-    if (cards.length >= 5) {
+    if (cards.length >= 6) {
+      cards[0].textContent = stats.total_users.toLocaleString();
+      cards[1].textContent = stats.active_users.toLocaleString();
+      cards[2].textContent = stats.total_assessments.toLocaleString();
+      cards[3].textContent = stats.total_videos.toLocaleString();
+      cards[4].textContent = stats.new_users_30d.toLocaleString();
+      cards[5].textContent = stats.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' EGP';
+    } else if (cards.length >= 5) {
       cards[0].textContent = stats.total_users.toLocaleString();
       cards[1].textContent = stats.active_users.toLocaleString();
       cards[2].textContent = stats.total_assessments.toLocaleString();
@@ -194,72 +201,56 @@ function initCharts(stats, growth) {
       journeyContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 1rem;">Not enough data yet.</div>';
     } else {
       const stageOrder = [
-        "Only Psychology",
-        "Psychology + Neuroscience",
-        "Psychology + Neuro + Letter",
-        "Psychology + Neuro + Letter + Astrology",
-        "Fully Completed"
+        "Letter Science",
+        "Astrology",
+        "Psychology",
+        "Neuroscience",
+        "Comprehensive"
       ];
 
-      const icons = ['bx-brain', 'bx-network-chart', 'bx-text', 'bx-star', 'bx-trophy'];
-      const shortLabels = ['Psychology', 'Neuroscience', 'Letter Science', 'Astrology', 'Comprehensive'];
+      const icons      = ['bx-text', 'bx-star', 'bx-brain', 'bx-network-chart', 'bx-trophy'];
+      const stageColors = ['#f59e0b', '#8b5cf6', '#6366f1', '#06b6d4', '#10b981'];
+      const stageBgs    = ['rgba(245,158,11,0.1)', 'rgba(139,92,246,0.1)', 'rgba(99,102,241,0.1)', 'rgba(6,182,212,0.1)', 'rgba(16,185,129,0.1)'];
 
-      // We need to calculate cumulative users who REACHED each stage
-      // The backend returns users who STOPPED at each stage
-      let cumulativeUsers = [];
-      let runningTotal = 0;
+      const counts = stageOrder.map(s => journeyData[s] || 0);
 
-      // Calculate from end to beginning to get running total of who reached the stage
-      for (let i = stageOrder.length - 1; i >= 0; i--) {
-        const stage = stageOrder[i];
-        runningTotal += (journeyData[stage] || 0);
-        cumulativeUsers[i] = runningTotal;
-      }
+      let html = `<div style="display:flex;align-items:center;justify-content:space-between;overflow-x:auto;padding:1rem 0.5rem;gap:0.5rem;">`;
 
-      let html = `<div style="display: flex; align-items: center; justify-content: space-between; overflow-x: auto; padding: 1rem 0.5rem; gap: 1rem;">`;
+      stageOrder.forEach((stage, i) => {
+        const count  = counts[i];
+        const color  = stageColors[i];
+        const bg     = stageBgs[i];
 
-      stageOrder.forEach((stage, index) => {
-        const usersReachingHere = cumulativeUsers[index];
-        const prevUsers = index === 0 ? cumulativeUsers[0] : cumulativeUsers[index - 1];
+        // Retention rate: what % of previous stage users continued
+        let arrowHtml = '';
+        if (i > 0) {
+          const prev       = counts[i - 1];
+          const retention  = prev === 0 ? 100 : Math.round((count / prev) * 100);
+          const isGood     = retention === 100;
+          const color_a    = isGood ? '#10b981' : '#ef4444';
+          const icon_a     = isGood ? '▲' : '🔻';
 
-        // Calculate Drop-off from previous stage
-        let dropOffHtml = '';
-        if (index > 0) {
-          const dropOffCount = prevUsers - usersReachingHere;
-          const dropOffPercent = prevUsers === 0 ? 0 : Math.round((dropOffCount / prevUsers) * 100);
-
-          dropOffHtml = `
-            <div style="display: flex; flex-direction: column; align-items: center; min-width: 60px;">
-              <span style="color: #ef4444; font-size: 0.75rem; font-weight: 700; white-space: nowrap; margin-bottom: 4px;">🔻 -${dropOffPercent}%</span>
-              <div style="height: 2px; width: 100%; background: var(--border-color); position: relative;">
-                <i class='bx bx-chevron-right' style="position: absolute; right: -8px; top: -6px; color: var(--text-muted); font-size: 1rem;"></i>
+          arrowHtml = `
+            <div style="display:flex;flex-direction:column;align-items:center;min-width:54px;flex-shrink:0;">
+              <span style="color:${color_a};font-size:0.72rem;font-weight:700;white-space:nowrap;margin-bottom:3px;">${icon_a} ${retention}%</span>
+              <div style="height:2px;width:100%;background:var(--border-color);position:relative;">
+                <i class='bx bx-chevron-right' style="position:absolute;right:-8px;top:-7px;color:var(--text-muted);font-size:1rem;"></i>
               </div>
-            </div>
-          `;
+            </div>`;
         }
 
-        const isLast = index === stageOrder.length - 1;
-        const color = isLast ? '#10b981' : 'var(--primary-color)';
-        const bg = isLast ? '#d1fae5' : 'rgba(92, 109, 250, 0.1)';
-
         html += `
-          ${dropOffHtml}
-          <div style="display: flex; flex-direction: column; align-items: center; min-width: 120px; text-align: center; flex: 1;">
-            <div style="width: 56px; height: 56px; border-radius: 12px; background: ${bg}; color: ${color}; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 0.75rem; border: 1px solid ${color}40; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <i class='bx ${icons[index]}'></i>
+          ${arrowHtml}
+          <div style="display:flex;flex-direction:column;align-items:center;min-width:100px;text-align:center;flex:1;">
+            <div style="width:52px;height:52px;border-radius:12px;background:${bg};color:${color};display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.6rem;border:1.5px solid ${color}40;">
+              <i class='bx ${icons[i]}'></i>
             </div>
-            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">${shortLabels[index]}</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">
-              ${usersReachingHere} <i class='bx bx-user' style="font-size: 0.7rem;"></i>
-            </span>
-          </div>
-        `;
+            <span style="font-size:0.78rem;font-weight:600;color:var(--text-main);margin-bottom:0.2rem;">${stage}</span>
+            <span style="font-size:0.8rem;font-weight:700;color:${color};">${count} <i class='bx bx-user' style="font-size:0.7rem;font-weight:400;color:var(--text-muted);"></i></span>
+          </div>`;
       });
 
       html += `</div>`;
-
-      // Override layout of the container locally for horizontal scroll if needed
-      journeyContainer.style.flexDirection = 'row';
       journeyContainer.style.display = 'block';
       journeyContainer.innerHTML = html;
     }

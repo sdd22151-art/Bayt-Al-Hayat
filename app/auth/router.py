@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -27,8 +27,11 @@ from app.auth.service import (
 )
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post(
@@ -37,7 +40,9 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
+@limiter.limit("10/minute")
 async def register(
+    request: Request,
     user_data: UserRegisterRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -50,7 +55,9 @@ async def register(
     response_model=LoginResponse,
     summary="Login and get access/refresh tokens",
 )
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     login_data: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -63,14 +70,16 @@ async def login(
     summary="OAuth2 Token endpoint for Swagger UI",
     include_in_schema=False,
 )
+@limiter.limit("5/minute")
 async def login_swagger(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncSession = Depends(get_db),
 ):
     """Dedicated endpoint specifically formatted for Swagger UI OAuth2 requirements"""
     login_req = LoginRequest(email=form_data.username, password=form_data.password)
     response = await login_user(login_req, db)
-    
+
     return {
         "access_token": response["access_token"],
         "token_type": response["token_type"],
@@ -82,7 +91,9 @@ async def login_swagger(
     response_model=ForgetPasswordResponse,
     summary="Request a password reset token",
 )
+@limiter.limit("3/minute")
 async def forget_password_route(
+    request: Request,
     data: ForgetPasswordRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -95,7 +106,9 @@ async def forget_password_route(
     response_model=MessageResponse,
     summary="Reset password using reset token",
 )
+@limiter.limit("3/minute")
 async def reset_password_route(
+    request: Request,
     data: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):

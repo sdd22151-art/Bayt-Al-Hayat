@@ -3,50 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>System Health - Abrag Admin</title>
+  <title>Settings - Abrag Admin</title>
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
-    .health-card { background: var(--bg-surface); border-radius: 10px; padding: 1.25rem 1.5rem; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 1rem; transition: box-shadow 0.2s; }
-    .health-card:hover { box-shadow: var(--card-shadow); }
-    .health-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
-    .health-icon.ok { background: #d1fae5; color: #065f46; }
+    /* ── Tab Nav ─────────────────────────────────────────────── */
+    .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem; }
+    .tab-btn { padding: 0.7rem 1.4rem; background: none; border: none; font-size: 0.875rem; font-weight: 600;
+               color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent;
+               margin-bottom: -2px; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
+    .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .tab-btn:hover:not(.active) { color: var(--text-main); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Cards / Tables ─────────────────────────────────────── */
+    .card { background: var(--bg-surface); border-radius: 10px; padding: 1.5rem; border: 1px solid var(--border-color); margin-bottom: 1.25rem; }
+    .section-title { font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+
+    .settings-table { width: 100%; border-collapse: collapse; }
+    .settings-table th { padding: 0.75rem 1rem; font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+                         border-bottom: 2px solid var(--border-color); text-align: left; text-transform: uppercase; letter-spacing: 0.05em; }
+    .settings-table td { padding: 0.85rem 1rem; font-size: 0.875rem; border-bottom: 1px solid var(--border-color); color: var(--text-main); vertical-align: middle; }
+    .settings-table tr:last-child td { border-bottom: none; }
+    .settings-table tr:hover td { background: var(--bg-body); }
+
+    .badge-active   { background: #d1fae5; color: #065f46; padding: 0.2rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+    .badge-inactive { background: #fee2e2; color: #991b1b; padding: 0.2rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+    .badge-test     { background: #fef3c7; color: #92400e; padding: 0.2rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+
+    .masked-key { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); letter-spacing: 0.05em; }
+
+    .btn-edit { padding: 0.3rem 0.85rem; background: var(--primary-color); color: #fff; border: none;
+                border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .btn-edit:hover { opacity: 0.85; }
+
+    /* ── Modal ──────────────────────────────────────────────── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+                     z-index: 1000; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: var(--bg-surface); border-radius: 16px; padding: 2rem;
+                 width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.25); position: relative; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.25rem; color: var(--text-main); }
+    .modal-title span { color: var(--primary-color); }
+    .modal-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none;
+                   font-size: 1.25rem; cursor: pointer; color: var(--text-muted); }
+    .modal-close:hover { color: var(--text-main); }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+                        text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-color);
+      background: var(--bg-body); color: var(--text-main); font-size: 0.875rem;
+      box-sizing: border-box; transition: border-color 0.2s; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary-color); }
+
+    .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    .btn-submit { flex: 1; padding: 0.7rem; background: var(--primary-color); color: #fff; border: none;
+                  border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+    .btn-submit:hover { opacity: 0.9; }
+    .btn-cancel { padding: 0.7rem 1.2rem; background: var(--bg-body); color: var(--text-muted);
+                  border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.875rem; cursor: pointer; }
+    .modal-msg { font-size: 0.82rem; margin-top: 0.5rem; font-weight: 600; }
+    .msg-ok  { color: #16a34a; }
+    .msg-err { color: #dc2626; }
+
+    /* ── Health ─────────────────────────────────────────────── */
+    .health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .health-card { background: var(--bg-surface); border-radius: 10px; padding: 1.1rem 1.25rem;
+                   border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.9rem; }
+    .health-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+    .health-icon.ok      { background: #d1fae5; color: #065f46; }
     .health-icon.missing { background: #fee2e2; color: #991b1b; }
-    .health-info h4 { font-size: 0.875rem; font-weight: 600; margin: 0 0 0.2rem; color: var(--text-main); }
-    .health-info p { font-size: 0.78rem; margin: 0; }
-    .status-ok { color: #16a34a; }
+    .health-info h4 { font-size: 0.85rem; font-weight: 600; margin: 0 0 0.2rem; }
+    .health-info p  { font-size: 0.76rem; margin: 0; }
+    .status-ok  { color: #16a34a; }
     .status-err { color: #dc2626; }
-    .status-banner { border-radius: 10px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; font-weight: 500; }
-    .banner-ok { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner { border-radius: 10px; padding: 1rem 1.5rem; margin-bottom: 1.25rem;
+                     display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; font-weight: 500; }
+    .banner-ok   { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .banner-warn { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .info-card { background: var(--bg-surface); border-radius: 10px; padding: 1.25rem 1.5rem; border: 1px solid var(--border-color); margin-top: 1rem; }
-    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
-    .info-row:last-child { border-bottom: none; }
-    .info-row label { color: var(--text-muted); }
-    .info-row span { font-weight: 500; color: var(--text-main); }
-    /* Admin Management */
-    .section-title { font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin: 2rem 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+
+    /* ── Admin Management ───────────────────────────────────── */
     .grant-form { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; }
     .grant-form input { flex: 1; padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 0.875rem; }
-    .grant-form input:focus { outline: 2px solid var(--primary-color); }
     .btn-grant { padding: 0.6rem 1.2rem; background: var(--primary-color); color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
     .btn-grant:hover { opacity: 0.9; }
     .admin-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     .admin-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border-color); }
-    .admin-table td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); color: var(--text-main); vertical-align: middle; }
+    .admin-table td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
     .admin-table tr:last-child td { border-bottom: none; }
     .badge-admin { background: #dbeafe; color: #1e40af; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
     .btn-revoke { padding: 0.3rem 0.75rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
     .btn-revoke:hover { background: #fca5a5; }
-    #grantMsg { font-size: 0.82rem; margin-left: 0.5rem; font-weight: 500; }
-    .msg-ok { color: #16a34a; }
-    .msg-err { color: #dc2626; }
+    .info-card { background: var(--bg-surface); border-radius: 10px; padding: 1.1rem 1.5rem; border: 1px solid var(--border-color); margin-top: 1rem; }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row label { color: var(--text-muted); }
+    .info-row span { font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="app-layout">
-
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">ABRAG</div>
       <nav class="nav-menu">
@@ -55,8 +115,10 @@
         <a href="users.html" class="nav-item"><i class='bx bx-group'></i> Users</a>
         <a href="assessments.html" class="nav-item"><i class='bx bx-book-open'></i> Assessments</a>
         <a href="videos.html" class="nav-item"><i class='bx bx-video'></i> Videos</a>
+        <a href="payments.html" class="nav-item"><i class='bx bx-dollar-circle'></i> Payments</a>
+        <a href="notifications.html" class="nav-item"><i class='bx bx-bell'></i> Notifications</a>
         <div class="nav-divider"></div>
-        <a href="settings.html" class="nav-item active"><i class='bx bx-server'></i> System Health</a>
+        <a href="settings.html" class="nav-item active"><i class='bx bx-cog'></i> Settings</a>
         <div class="nav-divider"></div>
         <a href="#" class="nav-item nav-logout" onclick="logout()"><i class='bx bx-log-out'></i> Logout</a>
       </nav>
@@ -75,128 +137,482 @@
 
       <div class="dashboard-body">
         <div class="dashboard-header-info">
-          <div class="breadcrumb"><strong>System Health</strong> <span>|</span> API Keys &amp; Services</div>
+          <div class="breadcrumb"><strong>Settings</strong> <span>|</span> Configuration Center</div>
         </div>
 
-        <!-- Overall banner -->
-        <div id="overallBanner" class="status-banner banner-warn">
-          <i class='bx bx-loader-alt bx-spin' style="font-size:1.25rem;"></i>
-          Checking system status...
+        <!-- Tab Bar -->
+        <div class="tab-bar" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:4px; padding-bottom:8px; border-bottom:1px solid var(--border-color); margin-bottom:1.5rem;">
+          <button class="tab-btn active" onclick="switchTab('gateways', this)">
+            <i class='bx bx-credit-card'></i> Payment Gateways
+          </button>
+          <button class="tab-btn" onclick="switchTab('pricing', this)">
+            <i class='bx bx-purchase-tag'></i> Pricing
+          </button>
+          <button class="tab-btn" onclick="switchTab('models', this)">
+            <i class='bx bx-brain'></i> AI Models
+          </button>
+          <button class="tab-btn" onclick="switchTab('health', this)">
+            <i class='bx bx-server'></i> System Health
+          </button>
+          <button class="tab-btn" onclick="switchTab('admins', this)">
+            <i class='bx bx-shield-alt-2'></i> Admin Access
+          </button>
         </div>
 
-        <!-- API Key Cards -->
-        <div class="health-grid" id="healthGrid">
-          <!-- Rendered by JS -->
-        </div>
-
-        <!-- Platform Info -->
-        <div class="info-card" style="margin-top:1.5rem;">
-          <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Platform Info</h4>
-          <div class="info-row"><label>Platform</label><span id="infoPlatform">—</span></div>
-          <div class="info-row"><label>Last Checked</label><span id="infoChecked">—</span></div>
-          <div class="info-row"><label>Backend URL</label><span id="infoURL">—</span></div>
-        </div>
-
-        <!-- ─── Admin Users Management ─────────────────────────────────────────── -->
-        <div class="section-title"><i class='bx bx-shield-alt-2' style="color: var(--primary-color);"></i> Admin Access Management</div>
-        <div class="info-card">
-          <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 1rem;">
-            Grant or revoke admin dashboard access. The user must already have an account on the platform.
-          </p>
-
-          <!-- Grant Form -->
-          <div class="grant-form">
-            <input type="email" id="grantEmailInput" placeholder="Enter user email..." />
-            <button class="btn-grant" onclick="grantAdmin()">
-              <i class='bx bx-user-plus'></i> Grant Access
-            </button>
-            <span id="grantMsg"></span>
+        <!-- ── TAB: Payment Gateways ─────────────────────────────── -->
+        <div class="tab-panel active" id="tab-gateways">
+          <div class="card">
+            <h3 class="section-title"><i class='bx bx-credit-card' style="color:var(--primary-color)"></i> Payment Gateways</h3>
+            <table class="settings-table" id="gatewayTable">
+              <thead>
+                <tr>
+                  <th>#</th><th>Name</th><th>Fees</th><th>Fees Type</th><th>Mode</th><th>Status</th><th>Description</th><th>Edit</th>
+                </tr>
+              </thead>
+              <tbody id="gatewayTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">
+                  <i class='bx bx-loader-alt bx-spin'></i> Loading...
+                </td></tr>
+              </tbody>
+            </table>
           </div>
-
-          <!-- Admin Table -->
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="adminsTableBody">
-              <tr><td colspan="4" style="color:var(--text-muted);text-align:center;padding:1rem;">Loading...</td></tr>
-            </tbody>
-          </table>
         </div>
 
+        <!-- ── TAB: Pricing ──────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-pricing">
+          <div class="card">
+            <h3 class="section-title"><i class='bx bx-purchase-tag' style="color:var(--primary-color)"></i> Pricing Settings</h3>
+            <table class="settings-table" id="pricingTable">
+              <thead>
+                <tr>
+                  <th>Service</th><th>Current Price (EGP)</th><th>Edit</th>
+                </tr>
+              </thead>
+              <tbody id="pricingTableBody">
+                <tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted);">
+                  <i class='bx bx-loader-alt bx-spin'></i> Loading...
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── TAB: AI Models ──────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-models">
+          <div class="card">
+            <h3 class="section-title"><i class='bx bx-brain' style="color:var(--primary-color)"></i> AI Model API Keys</h3>
+            <table class="settings-table" id="modelsTable">
+              <thead>
+                <tr><th>Service</th><th>Description</th><th>Key Preview</th><th>Status</th><th>Edit</th></tr>
+              </thead>
+              <tbody id="modelsTableBody">
+                <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">
+                  <i class='bx bx-loader-alt bx-spin'></i> Loading...
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── TAB: System Health ──────────────────────────────────── -->
+        <div class="tab-panel" id="tab-health">
+          <div id="overallBanner" class="status-banner banner-warn">
+            <i class='bx bx-loader-alt bx-spin' style="font-size:1.25rem;"></i> Checking system status...
+          </div>
+          <div class="health-grid" id="healthGrid"></div>
+          <div class="info-card" style="margin-top:1.25rem;">
+            <h4 style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Platform Info</h4>
+            <div class="info-row"><label>Platform</label><span id="infoPlatform">—</span></div>
+            <div class="info-row"><label>Last Checked</label><span id="infoChecked">—</span></div>
+            <div class="info-row"><label>Backend URL</label><span id="infoURL">—</span></div>
+          </div>
+        </div>
+
+        <!-- ── TAB: Admin Access ───────────────────────────────────── -->
+        <div class="tab-panel" id="tab-admins">
+          <div class="card">
+            <h3 class="section-title"><i class='bx bx-shield-alt-2' style="color:var(--primary-color)"></i> Admin Access Management</h3>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 1rem;">Grant or revoke admin dashboard access.</p>
+            <div class="grant-form">
+              <input type="email" id="grantEmailInput" placeholder="Enter user email...">
+              <button class="btn-grant" onclick="grantAdmin()"><i class='bx bx-user-plus'></i> Grant Access</button>
+              <span id="grantMsg"></span>
+            </div>
+            <table class="admin-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+              <tbody id="adminsTableBody">
+                <tr><td colspan="4" style="color:var(--text-muted);text-align:center;padding:1rem;">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 
-  <script src="app.js"></script>
-  <script>
-    const serviceIcons = {
-      'OpenAI':       'bx-brain',
-      'Stability AI': 'bx-image',
-      'D-ID':         'bx-video-recording',
-      'Database':     'bx-data',
-      'JWT Secret':   'bx-lock-alt',
-      'Cloudinary':   'bx-cloud-upload',
-    };
+  <!-- ── Modal: Edit Gateway ───────────────────────────────────── -->
+  <div class="modal-overlay" id="gatewayModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('gatewayModal')"><i class='bx bx-x'></i></button>
+      <div class="modal-title">Edit <span id="gwModalName">Kashier</span></div>
+      <div class="modal-sub">Update gateway credentials and configuration</div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="gw_status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+      </div>
+      <div class="form-group">
+        <label>Mode</label>
+        <select id="gw_mode"><option value="test">Test</option><option value="live">Live</option></select>
+      </div>
+      <div class="form-group">
+        <label>Fees Amount</label>
+        <input type="text" id="gw_fees" placeholder="e.g. 2.9">
+      </div>
+      <div class="form-group">
+        <label>Fees Type</label>
+        <select id="gw_fees_type"><option value="Percentage">Percentage</option><option value="Fixed">Fixed</option></select>
+      </div>
+      <div class="form-group">
+        <label>Description (English)</label>
+        <input type="text" id="gw_description">
+      </div>
+      <div class="form-group">
+        <label>Merchant ID</label>
+        <input type="text" id="gw_merchant_id" placeholder="MID-XXXXX-XXX">
+      </div>
+      <div class="form-group">
+        <label>API Key (Iframe Key)</label>
+        <input type="text" id="gw_api_key" placeholder="Leave blank to keep current">
+      </div>
+      <div class="form-group">
+        <label>Secret Key</label>
+        <input type="text" id="gw_secret_key" placeholder="Leave blank to keep current">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('gatewayModal')">Cancel</button>
+        <button class="btn-submit" onclick="submitGateway()"><i class='bx bx-save'></i> Save Changes</button>
+      </div>
+      <div class="modal-msg" id="gwMsg"></div>
+    </div>
+  </div>
 
+  <!-- ── Modal: Edit Pricing ──────────────────────────────────── -->
+  <div class="modal-overlay" id="pricingModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('pricingModal')"><i class='bx bx-x'></i></button>
+      <div class="modal-title">Edit Price <span id="prModalLabel"></span></div>
+      <div class="modal-sub">Update the price users pay for this service inline.</div>
+      <input type="hidden" id="prKey">
+      <div class="form-group">
+        <label>Price Amount</label>
+        <input type="number" id="prValue" placeholder="e.g. 250" style="margin-bottom: 10px;">
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <select id="prCurrency">
+          <option value="EGP">EGP</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="SAR">SAR</option>
+          <option value="AED">AED</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('pricingModal')">Cancel</button>
+        <button class="btn-submit" onclick="submitPricingSetting()"><i class='bx bx-save'></i> Save Price</button>
+      </div>
+      <div class="modal-msg" id="prMsg"></div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Edit AI Model Key ─────────────────────────────── -->
+  <div class="modal-overlay" id="modelModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modelModal')"><i class='bx bx-x'></i></button>
+      <div class="modal-title">Edit <span id="mdModalLabel">Setting</span></div>
+      <div class="modal-sub" id="mdModalDesc"></div>
+      <input type="hidden" id="mdKey">
+      <div class="form-group">
+        <label id="mdValueLabel">New Value</label>
+        <input type="text" id="mdValue" placeholder="Enter new value...">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modelModal')">Cancel</button>
+        <button class="btn-cancel" onclick="testModelSetting()" style="color:var(--primary-color);border-color:var(--primary-color)"><i class='bx bx-check-shield'></i> Test Connection</button>
+        <button class="btn-submit" onclick="submitModelSetting()"><i class='bx bx-save'></i> Save</button>
+      </div>
+      <div class="modal-msg" id="mdMsg"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=2"></script>
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
       requireAuth();
-      fetchHealth();
-      loadAdmins();
+      loadGateways();
     });
 
-    async function fetchHealth() {
+    // ── Tab Switching ─────────────────────────────────────────────
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      btn.classList.add('active');
+      // Lazy-load each section
+      if (name === 'gateways' && !window._gwLoaded) loadGateways();
+      if (name === 'pricing'  && !window._prLoaded) loadPricing();
+      if (name === 'models'   && !window._mdLoaded) loadModels();
+      if (name === 'health'   && !window._hlLoaded) loadHealth();
+      if (name === 'admins'   && !window._adLoaded) loadAdmins();
+    }
+
+    // ── Payment Gateways ─────────────────────────────────────────
+    let _currentGateway = null;
+
+    async function loadGateways() {
+      window._gwLoaded = true;
+      const tbody = document.getElementById('gatewayTableBody');
+      try {
+        const res = await apiFetch('/admin/settings/gateways');
+        if (!res) return;
+        const gateways = await res.json();
+        tbody.innerHTML = gateways.map((gw, i) => {
+          const statusBadge = gw.status === 'active'
+            ? `<span class="badge-active">Active</span>`
+            : `<span class="badge-inactive">Inactive</span>`;
+          const modeBadge = gw.mode === 'test'
+            ? `<span class="badge-test">Test</span>`
+            : `<span style="background:#dbeafe;color:#1d4ed8;padding:0.2rem 0.65rem;border-radius:999px;font-size:0.72rem;font-weight:700;">Live</span>`;
+          return `
+            <tr>
+              <td>${i + 1}</td>
+              <td style="font-weight:600;">${gw.name}</td>
+              <td>${gw.fees}</td>
+              <td>${gw.fees_type}</td>
+              <td>${modeBadge}</td>
+              <td>${statusBadge}</td>
+              <td style="max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${gw.description}</td>
+              <td><button class="btn-edit" onclick="openGatewayModal(${JSON.stringify(gw).replace(/"/g, '&quot;')})"><i class='bx bx-edit'></i> Edit</button></td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:1.5rem;">Failed to load gateways.</td></tr>`;
+      }
+    }
+
+    function openGatewayModal(gw) {
+      _currentGateway = gw;
+      document.getElementById('gwModalName').textContent = gw.name;
+      document.getElementById('gw_status').value    = gw.status;
+      document.getElementById('gw_mode').value      = gw.mode;
+      document.getElementById('gw_fees').value      = gw.fees;
+      document.getElementById('gw_fees_type').value = gw.fees_type;
+      document.getElementById('gw_description').value = gw.description;
+      document.getElementById('gw_merchant_id').value  = gw.merchant_id;
+      document.getElementById('gw_api_key').value    = '';
+      document.getElementById('gw_secret_key').value = '';
+      document.getElementById('gwMsg').textContent   = '';
+      document.getElementById('gatewayModal').classList.add('show');
+    }
+
+    async function submitGateway() {
+      const msg = document.getElementById('gwMsg');
+      msg.textContent = 'Saving...'; msg.className = 'modal-msg';
+      const body = {
+        status:      document.getElementById('gw_status').value,
+        mode:        document.getElementById('gw_mode').value,
+        fees:        document.getElementById('gw_fees').value,
+        fees_type:   document.getElementById('gw_fees_type').value,
+        description: document.getElementById('gw_description').value,
+        merchant_id: document.getElementById('gw_merchant_id').value,
+      };
+      const apiKey    = document.getElementById('gw_api_key').value.trim();
+      const secretKey = document.getElementById('gw_secret_key').value.trim();
+      if (apiKey)    body.api_key    = apiKey;
+      if (secretKey) body.secret_key = secretKey;
+
+      const res = await apiFetch('/admin/settings/gateways/kashier', {
+        method: 'PUT', body: JSON.stringify(body)
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        msg.textContent = data.message; msg.className = 'modal-msg msg-ok';
+        window._gwLoaded = false;
+        setTimeout(() => { closeModal('gatewayModal'); loadGateways(); }, 1000);
+      } else {
+        msg.textContent = data.detail || 'Error saving.'; msg.className = 'modal-msg msg-err';
+      }
+    }
+
+    // ── Pricing ───────────────────────────────────────────────────
+    async function loadPricing() {
+      window._prLoaded = true;
+      const tbody = document.getElementById('pricingTableBody');
+      try {
+        const res = await apiFetch('/admin/settings/pricing');
+        if (!res) return;
+        const prices = await res.json();
+        tbody.innerHTML = prices.map(p => `
+          <tr>
+            <td style="font-weight:600;text-transform:capitalize;">${p.service_type.replace(/_/g, ' ')}</td>
+            <td style="font-weight:800;color:var(--primary-color);">${p.amount} ${p.currency}</td>
+            <td><button class="btn-edit" onclick="openPricingModal('${p.service_type}', '${p.amount}', '${p.currency}')"><i class='bx bx-edit'></i> Edit</button></td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#dc2626;padding:1.5rem;">Failed to load pricing.</td></tr>`;
+      }
+    }
+
+    function openPricingModal(service_type, current_amount, current_currency) {
+      document.getElementById('prModalLabel').textContent = service_type.replace(/_/g, ' ').toUpperCase();
+      document.getElementById('prKey').value = service_type;
+      document.getElementById('prValue').value = current_amount;
+      document.getElementById('prCurrency').value = current_currency;
+      document.getElementById('prMsg').textContent = '';
+      document.getElementById('pricingModal').classList.add('show');
+    }
+
+    async function submitPricingSetting() {
+      const service_type = document.getElementById('prKey').value;
+      const amount = document.getElementById('prValue').value.trim();
+      const currency = document.getElementById('prCurrency').value;
+      const msg = document.getElementById('prMsg');
+      
+      if (!amount) { msg.textContent = 'Please enter an amount.'; msg.className = 'modal-msg msg-err'; return; }
+      msg.textContent = 'Saving...'; msg.className = 'modal-msg';
+      
+      const res = await apiFetch(`/admin/settings/pricing/${service_type}`, {
+        method: 'PUT', body: JSON.stringify({ amount: amount, currency: currency })
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        msg.textContent = data.message; msg.className = 'modal-msg msg-ok';
+        setTimeout(() => { closeModal('pricingModal'); loadPricing(); }, 1000);
+      } else {
+        msg.textContent = data.detail || 'Error saving.'; msg.className = 'modal-msg msg-err';
+      }
+    }
+
+    // ── AI Models ─────────────────────────────────────────────────
+    async function loadModels() {
+      window._mdLoaded = true;
+      const tbody = document.getElementById('modelsTableBody');
+      try {
+        const res = await apiFetch('/admin/settings/models');
+        if (!res) return;
+        const models = await res.json();
+        tbody.innerHTML = models.map(m => {
+          const badge = m.has_value
+            ? `<span class="badge-active">Configured</span>`
+            : `<span class="badge-inactive">Missing</span>`;
+          return `
+            <tr>
+              <td style="font-weight:600;">${m.label}</td>
+              <td style="font-size:0.8rem;color:var(--text-muted);">${m.description || '—'}</td>
+              <td><span class="masked-key">${m.value || '—'}</span></td>
+              <td>${badge}</td>
+              <td><button class="btn-edit" onclick="openModelModal(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+                <i class='bx bx-edit'></i> Edit
+              </button></td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#dc2626;padding:1.5rem;">Failed to load.</td></tr>`;
+      }
+    }
+
+    function openModelModal(m) {
+      document.getElementById('mdModalLabel').textContent = m.label;
+      document.getElementById('mdModalDesc').textContent  = m.description || '';
+      document.getElementById('mdKey').value   = m.key;
+      document.getElementById('mdValue').value = '';
+      document.getElementById('mdValueLabel').textContent = m.is_secret ? 'New Value (leave blank to keep current)' : 'Value';
+      document.getElementById('mdMsg').textContent = '';
+      document.getElementById('modelModal').classList.add('show');
+    }
+
+    async function submitModelSetting() {
+      const key   = document.getElementById('mdKey').value;
+      const value = document.getElementById('mdValue').value.trim();
+      const msg   = document.getElementById('mdMsg');
+      if (!value) { msg.textContent = 'Please enter a value.'; msg.className = 'modal-msg msg-err'; return; }
+      msg.textContent = 'Saving...'; msg.className = 'modal-msg';
+      const res = await apiFetch(`/admin/settings/models/${key}`, {
+        method: 'PUT', body: JSON.stringify({ value })
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        msg.textContent = data.message; msg.className = 'modal-msg msg-ok';
+        window._mdLoaded = false;
+        setTimeout(() => { closeModal('modelModal'); loadModels(); }, 1000);
+      } else {
+        msg.textContent = data.detail || 'Error.'; msg.className = 'modal-msg msg-err';
+      }
+    }
+
+    async function testModelSetting() {
+      const key   = document.getElementById('mdKey').value;
+      const value = document.getElementById('mdValue').value.trim();
+      const msg   = document.getElementById('mdMsg');
+      if (!value) { msg.textContent = 'Please enter a value to test.'; msg.className = 'modal-msg msg-err'; return; }
+      msg.textContent = 'Testing connection...'; msg.className = 'modal-msg';
+      const res = await apiFetch(`/admin/settings/models/${key}/test`, {
+        method: 'POST', body: JSON.stringify({ value })
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        msg.innerHTML = `<i class='bx bx-check-circle'></i> ${data.message}`; msg.className = 'modal-msg msg-ok';
+      } else {
+        msg.innerHTML = `<i class='bx bx-x-circle'></i> ${data.detail || 'Connection failed.'}`; msg.className = 'modal-msg msg-err';
+      }
+    }
+
+    // ── System Health ─────────────────────────────────────────────
+    const serviceIcons = {
+      'OpenAI': 'bx-brain', 'Stability AI': 'bx-image',
+      'D-ID': 'bx-video-recording', 'Database': 'bx-data',
+      'JWT Secret': 'bx-lock-alt', 'Cloudinary': 'bx-cloud-upload',
+    };
+    async function loadHealth() {
+      window._hlLoaded = true;
       try {
         const res = await apiFetch('/admin/health');
         if (!res) return;
         const data = await res.json();
-
         const banner = document.getElementById('overallBanner');
         if (data.overall === 'healthy') {
           banner.className = 'status-banner banner-ok';
           banner.innerHTML = `<i class='bx bx-check-circle' style="font-size:1.25rem;"></i> All systems operational`;
         } else {
           banner.className = 'status-banner banner-warn';
-          banner.innerHTML = `<i class='bx bx-error' style="font-size:1.25rem;"></i> Some services are not configured — check below`;
+          banner.innerHTML = `<i class='bx bx-error' style="font-size:1.25rem;"></i> Some services are not configured`;
         }
-
-        const grid = document.getElementById('healthGrid');
-        grid.innerHTML = Object.entries(data.services).map(([name, info]) => {
+        document.getElementById('healthGrid').innerHTML = Object.entries(data.services).map(([name, info]) => {
           const icon = serviceIcons[name] || 'bx-cog';
-          const isOk = info.configured;
-          return `
-            <div class="health-card">
-              <div class="health-icon ${isOk ? 'ok' : 'missing'}">
-                <i class='bx ${icon}'></i>
-              </div>
-              <div class="health-info">
-                <h4>${name}</h4>
-                <p class="${isOk ? 'status-ok' : 'status-err'}">${info.status}</p>
-              </div>
-            </div>
-          `;
+          return `<div class="health-card">
+            <div class="health-icon ${info.configured ? 'ok' : 'missing'}"><i class='bx ${icon}'></i></div>
+            <div class="health-info"><h4>${name}</h4><p class="${info.configured ? 'status-ok' : 'status-err'}">${info.status}</p></div>
+          </div>`;
         }).join('');
-
         document.getElementById('infoPlatform').textContent = data.platform || '—';
-        document.getElementById('infoChecked').textContent = data.checked_at
-          ? new Date(data.checked_at).toLocaleString() : '—';
-        document.getElementById('infoURL').textContent = window.API_URL;
-
-      } catch (err) {
-        document.getElementById('overallBanner').innerHTML =
-          `<i class='bx bx-error'></i> Could not connect to backend.`;
+        document.getElementById('infoChecked').textContent  = data.checked_at ? new Date(data.checked_at).toLocaleString() : '—';
+        document.getElementById('infoURL').textContent      = window.API_URL;
+      } catch (e) {
+        document.getElementById('overallBanner').innerHTML = `<i class='bx bx-error'></i> Could not connect to backend.`;
       }
     }
 
-    // ─── Admin Management Logic ───────────────────────────────────────────────
+    // ── Admin Management ──────────────────────────────────────────
     let currentAdmins = [];
-
     async function loadAdmins() {
+      window._adLoaded = true;
       const tbody = document.getElementById('adminsTableBody');
       try {
         const res = await apiFetch('/admin/admins');
@@ -207,11 +623,10 @@
         tbody.innerHTML = `<tr><td colspan="4" style="color:#dc2626;text-align:center;">Failed to load admins.</td></tr>`;
       }
     }
-
     function renderAdmins() {
       const tbody = document.getElementById('adminsTableBody');
       if (!currentAdmins.length) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-muted);text-align:center;">No admins found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">No admins found.</td></tr>`;
         return;
       }
       tbody.innerHTML = currentAdmins.map(a => `
@@ -219,49 +634,43 @@
           <td>${a.name}</td>
           <td style="color:var(--text-muted);">${a.email}</td>
           <td><span class="badge-admin"><i class='bx bx-shield'></i> Admin</span></td>
-          <td>
-            <button class="btn-revoke" onclick="revokeAdmin('${a.id}', '${a.name}')">
-              <i class='bx bx-user-minus'></i> Revoke
-            </button>
-          </td>
+          <td><button class="btn-revoke" onclick="revokeAdmin('${a.id}','${a.name}')"><i class='bx bx-user-minus'></i> Revoke</button></td>
         </tr>
       `).join('');
     }
-
     async function grantAdmin() {
       const email = document.getElementById('grantEmailInput').value.trim();
-      const msg = document.getElementById('grantMsg');
-      if (!email) { msg.textContent = 'Enter an email first.'; msg.className = 'msg-err'; return; }
-
-      msg.textContent = 'Processing...'; msg.className = '';
-      const res = await apiFetch('/admin/admins/grant', {
-        method: 'POST',
-        body: JSON.stringify({ email })
-      });
+      const msg   = document.getElementById('grantMsg');
+      if (!email) { msg.textContent = 'Enter an email first.'; msg.style.color = '#dc2626'; return; }
+      msg.textContent = 'Processing...'; msg.style.color = '';
+      const res = await apiFetch('/admin/admins/grant', { method: 'POST', body: JSON.stringify({ email }) });
       if (!res) return;
       const data = await res.json();
       if (res.ok) {
-        msg.textContent = data.message;
-        msg.className = 'msg-ok';
+        msg.textContent = data.message; msg.style.color = '#16a34a';
         document.getElementById('grantEmailInput').value = '';
-        loadAdmins();
+        window._adLoaded = false; loadAdmins();
       } else {
-        msg.textContent = data.detail || 'Error granting access.';
-        msg.className = 'msg-err';
+        msg.textContent = data.detail || 'Error.'; msg.style.color = '#dc2626';
       }
     }
-
     async function revokeAdmin(userId, name) {
       if (!confirm(`Remove admin access from ${name}?`)) return;
       const res = await apiFetch(`/admin/admins/revoke/${userId}`, { method: 'DELETE' });
       if (!res) return;
       const data = await res.json();
-      if (res.ok) {
-        loadAdmins();
-      } else {
-        alert(data.detail || 'Error revoking access.');
-      }
+      if (res.ok) { window._adLoaded = false; loadAdmins(); }
+      else alert(data.detail || 'Error.');
     }
+
+    // ── Utilities ─────────────────────────────────────────────────
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+    });
   </script>
 </body>
 </html>

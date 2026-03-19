@@ -1,0 +1,56 @@
+INFO:     Will watch for changes in these directories: ['/Users/ahmed/abrag']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [3627] using WatchFiles
+INFO:     Started server process [3684]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:52474 - "GET /admin-ui/assessments.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52474 - "GET /admin/assessments/journey HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52475 - "GET /admin/assessments HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52488 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52490 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52488 - "GET /admin/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52511 - "GET /admin-ui/dashboard.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52513 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52511 - "GET /admin/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52522 - "GET /admin-ui/dashboard.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52524 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52522 - "GET /admin/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52522 - "GET /admin-ui/dashboard.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52524 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52522 - "GET /admin/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52536 - "GET /admin-ui/dashboard.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52538 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52536 - "GET /admin/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52538 - "GET /admin/assessments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52536 - "GET /admin/assessments/journey HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52548 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52546 - "GET /admin/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52815 - "GET /admin/assessments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52813 - "GET /admin/assessments/journey HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53049 - "GET /admin-ui/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53049 - "GET /admin-ui/styles.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53049 - "GET /admin-ui/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53049 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53051 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53051 - "GET /admin-ui/dashboard.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53069 - "GET /admin/users/growth HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53051 - "GET /admin/stats HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app/routes/admin.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3684]
+Fatal Python error: init_sys_streams: can't initialize sys standard streams
+Python runtime state: core initialized
+OSError: [Errno 9] Bad file descriptor
+
+Current thread 0x0000000201a6df00 (most recent call first):
+  <no Python frame>
+WARNING:  WatchFiles detected changes in 'app/routes/admin.py'. Reloading...
+Fatal Python error: init_sys_streams: can't initialize sys standard streams
+Python runtime state: core initialized
+OSError: [Errno 9] Bad file descriptor
+
+Current thread 0x0000000201a6df00 (most recent call first):
+  <no Python frame>

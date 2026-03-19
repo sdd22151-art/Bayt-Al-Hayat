@@ -27,7 +27,7 @@ async def register_user(user_data: UserRegisterRequest, background_tasks: Backgr
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail="البريد الإلكتروني مسجل بالفعل"
         )
 
     # Create new user with hashed password (auto-verified)
@@ -47,7 +47,7 @@ async def register_user(user_data: UserRegisterRequest, background_tasks: Backgr
     await db.refresh(new_user)
 
     return {
-        "message": "User registered successfully.",
+        "message": "تم تسجيل المستخدم بنجاح.",
         "user": new_user,
     }
 
@@ -60,21 +60,21 @@ async def login_user(login_data: LoginRequest, db: AsyncSession) -> dict:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="البريد الإلكتروني أو كلمة المرور غير صحيحة"
         )
 
     # Verify password
     if not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="البريد الإلكتروني أو كلمة المرور غير صحيحة"
         )
 
     # Check if account is active
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is deactivated"
+            detail="تم إلغاء تنشيط الحساب"
         )
 
     # Generate tokens
@@ -98,7 +98,7 @@ async def forget_password(data: ForgetPasswordRequest, background_tasks: Backgro
     if not user:
         # Return same message even if email doesn't exist (security)
         return {
-            "message": "If this email is registered, a reset token has been generated",
+            "message": "إذا كان هذا البريد الإلكتروني مسجلاً، فقد تم إنشاء رمز إعادة تعيين",
             "reset_token": "",
         }
 
@@ -115,7 +115,7 @@ async def forget_password(data: ForgetPasswordRequest, background_tasks: Backgro
     background_tasks.add_task(send_reset_password_email, user.email, reset_code)
 
     return {
-        "message": "If this email is registered, a password reset code has been sent.",
+        "message": "إذا كان هذا البريد الإلكتروني مسجلاً، فقد تم إرسال رمز إعادة تعيين كلمة المرور.",
     }
 
 
@@ -127,21 +127,21 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession) -> dict:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="المستخدم غير موجود"
         )
         
     # Verify the 6-digit code
     if user.verification_code != data.verification_code:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification code"
+            detail="رمز التحقق غير صحيح"
         )
         
     # Check if code has expired
     if not user.verification_code_expires_at or user.verification_code_expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification code has expired"
+            detail="انتهت صلاحية رمز التحقق"
         )
 
     # Update password and clear code
@@ -150,7 +150,7 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession) -> dict:
     user.verification_code_expires_at = None
     await db.commit()
 
-    return {"message": "Password reset successfully"}
+    return {"message": "تم إعادة تعيين كلمة المرور بنجاح"}
 
 
 async def refresh_token_service(refresh_token: str, db: AsyncSession) -> dict:
@@ -160,14 +160,14 @@ async def refresh_token_service(refresh_token: str, db: AsyncSession) -> dict:
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token"
+            detail="رمز التحديث غير صالح أو منتهي الصلاحية"
         )
 
     # Verify it's a refresh token
     if payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token type"
+            detail="نوع الرمز غير صالح"
         )
 
     user_id = payload.get("sub")
@@ -180,7 +180,7 @@ async def refresh_token_service(refresh_token: str, db: AsyncSession) -> dict:
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or deactivated"
+            detail="المستخدم غير موجود أو تم إلغاء تنشيط حسابه"
         )
 
     # Generate new tokens
@@ -203,17 +203,17 @@ async def verify_account(email: str, verification_code: str, db: AsyncSession) -
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="المستخدم غير موجود"
         )
 
     if user.is_verified:
-        return {"message": "Account is already verified"}
+        return {"message": "الحساب موثق بالفعل"}
 
     # Check if code matches
     if user.verification_code != verification_code:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification code"
+            detail="رمز التحقق غير صحيح"
         )
 
     # Check expiration
@@ -221,7 +221,7 @@ async def verify_account(email: str, verification_code: str, db: AsyncSession) -
     if not expires_at or expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification code expired"
+            detail="انتهت صلاحية رمز التحقق"
         )
 
     # Mark user as verified and clear the code
@@ -230,10 +230,10 @@ async def verify_account(email: str, verification_code: str, db: AsyncSession) -
     user.verification_code_expires_at = None
     await db.commit()
 
-    return {"message": "Account verified successfully"}
+    return {"message": "تم توثيق الحساب بنجاح"}
 
 
 async def logout() -> dict:
     # With JWT, logout is handled client-side by deleting the tokens
     # In a more advanced setup, we'd blacklist the token
-    return {"message": "Logged out successfully. Please delete your tokens."}
+    return {"message": "تم تسجيل الخروج بنجاح. يرجى حذف الرموز الخاصة بك."}

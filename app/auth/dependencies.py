@@ -16,7 +16,7 @@ async def get_current_user(
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="تعذر التحقق من بيانات الاعتماد",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
@@ -30,7 +30,7 @@ async def get_current_user(
         if token_type != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type. Please use an access token.",
+                detail="نوع الرمز غير صالح. يرجى استخدام رمز وصول.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
             
@@ -46,7 +46,7 @@ async def get_current_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
+            detail="مستخدم غير نشط"
         )
         
     return user

@@ -1,51 +1,33 @@
 import asyncio
 import os
-from datetime import date
+import uuid
+import bcrypt
+from datetime import date, datetime
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import select, Column, String, Boolean, Date, Time, DateTime
-from sqlalchemy.orm import DeclarativeBase
-import uuid
-from datetime import datetime
-
-# Setup basic DB stuff inside the script to avoid import issues
-class Base(DeclarativeBase):
-    pass
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = Column(String, unique=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    fullname = Column(String, nullable=False)
-    date_of_birth = Column(Date, nullable=False)
-    place_of_birth = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-# Simple hash mock or import
-try:
-    from passlib.context import CryptContext
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    def get_password_hash(password):
-        return pwd_context.hash(password)
-except:
-    def get_password_hash(password):
-        return password # fallback
+from sqlalchemy import text
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
+def get_password_hash(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
 async def run():
+    if not DATABASE_URL:
+        print("❌ Error: DATABASE_URL is not set.")
+        return
+
+    print("🔌 Connecting to database...")
     engine = create_async_engine(DATABASE_URL)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    
     async with async_session() as session:
         # Check if user exists by querying the table directly
-        from sqlalchemy import text
         res = await session.execute(text("SELECT id FROM users WHERE email = 'admin@abrag.com'"))
         row = res.fetchone()
         
@@ -53,19 +35,20 @@ async def run():
         if not row:
             uid = str(uuid.uuid4())
             await session.execute(text(
-                "INSERT INTO users (id, email, hashed_password, fullname, date_of_birth, place_of_birth, is_active, is_verified, created_at) "
-                "VALUES (:id, :email, :hp, :fullname, :dob, :pob, :ia, :iv, :ca)"
+                "INSERT INTO users (id, email, hashed_password, fullname, date_of_birth, place_of_birth, is_active, is_verified, is_admin, created_at) "
+                "VALUES (:id, :email, :hp, :fullname, :dob, :pob, :ia, :iv, :is_admin, :ca)"
             ), {
-                "id": uid, "email": "admin@abrag.com", "hp": hp, "fullname": "Admin User", 
-                "dob": date(1990, 1, 1), "pob": "Cairo", "ia": True, "iv": True, "ca": datetime.utcnow()
+                "id": uid, "email": "admin@abrag.com", "hp": hp, "fullname": "Super Admin", 
+                "dob": date(1990, 1, 1), "pob": "Cairo", "ia": True, "iv": True, "is_admin": True, "ca": datetime.utcnow()
             })
-            print("CREATED")
+            print("✅ Admin user CREATED successfully. (Email: admin@abrag.com | Pass: 123456)")
         else:
             await session.execute(text(
-                "UPDATE users SET hashed_password = :hp, is_active = :ia, is_verified = :iv WHERE email = 'admin@abrag.com'"
-            ), {"hp": hp, "ia": True, "iv": True})
-            print("UPDATED")
+                "UPDATE users SET hashed_password = :hp, is_active = :ia, is_verified = :iv, is_admin = :is_admin WHERE email = 'admin@abrag.com'"
+            ), {"hp": hp, "ia": True, "iv": True, "is_admin": True})
+            print("✅ Admin user UPDATED successfully. (Email: admin@abrag.com | Pass: 123456)")
         await session.commit()
+    print("🎉 Done!")
 
 if __name__ == "__main__":
     asyncio.run(run())

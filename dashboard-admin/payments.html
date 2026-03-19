@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payments - Abrag Admin Dashboard</title>
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">ABRAG</div>
+      <nav class="nav-menu">
+        <a href="dashboard.html" class="nav-item"><i class='bx bx-desktop'></i> Dashboard</a>
+        <div class="nav-divider"></div>
+        <a href="users.html" class="nav-item"><i class='bx bx-group'></i> Users</a>
+        <a href="assessments.html" class="nav-item"><i class='bx bx-book-open'></i> Assessments</a>
+        <a href="videos.html" class="nav-item"><i class='bx bx-video'></i> Videos</a>
+        <a href="payments.html" class="nav-item active"><i class='bx bx-dollar-circle'></i> Payments</a>
+        <a href="notifications.html" class="nav-item"><i class='bx bx-bell'></i> Notifications</a>
+        <div class="nav-divider"></div>
+        <a href="settings.html" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
+        <div class="nav-divider"></div>
+        <a href="#" class="nav-item nav-logout" onclick="logout()"><i class='bx bx-log-out'></i> Logout</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-left">
+          <button class="btn-icon" id="toggleSidebar"><i class='bx bx-menu'></i></button>
+        </div>
+        <div class="header-right">
+          <button class="btn-icon" id="toggleTheme"><i class='bx bx-moon'></i></button>
+          <button class="btn-icon" id="toggleFullscreen"><i class='bx bx-fullscreen'></i></button>
+          <div class="user-profile">
+            <div class="avatar"><i class='bx bx-user'></i></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-body">
+        <div class="dashboard-header-info">
+          <div class="breadcrumb"><strong>Payments</strong> <span>|</span> Transaction Management</div>
+          <div class="date-time-display" id="currentDateTime">--</div>
+        </div>
+
+        <div class="welcome-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <div class="welcome-banner-text">
+            <h1>Payments Management</h1>
+            <p>View and track all user transactions and revenue</p>
+          </div>
+          <div class="banner-icon"><i class='bx bx-dollar-circle'></i></div>
+        </div>
+
+        <div class="card" style="background: var(--bg-surface); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap;">
+            <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0;">Transaction Log</h2>
+            <div style="display: flex; gap: 0.75rem; flex: 1; max-width: 500px;">
+              <div style="position: relative; flex: 1;">
+                <i class='bx bx-search' style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                <input type="text" id="searchInput" placeholder="Search order ID, email, name..." style="width: 100%; padding: 8px 12px 8px 36px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main);">
+              </div>
+              <button class="btn-icon" onclick="loadPayments()" style="background: var(--primary-color); color: white; border: none; width: 40px; height: 38px; border-radius: 6px; cursor: pointer;">
+                <i class='bx bx-refresh'></i>
+              </button>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table" id="paymentsTable" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Date</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">User</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Order ID</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Service</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Amount</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsTableBody">
+                <!-- JS will populate rows -->
+                <tr><td colspan="6" style="text-align:center; padding: 3rem; color: var(--text-muted);"><i class='bx bx-loader-alt bx-spin' style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i>Loading payments...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js?v=2"></script>
+  <!-- Logic Scripts -->
+  <script>
+    let allPayments = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      requireAuth();
+      loadPayments();
+
+      document.getElementById('searchInput').addEventListener('input', function(e) {
+        renderTable(e.target.value);
+      });
+    });
+
+    async function loadPayments() {
+      const tbody = document.getElementById('paymentsTableBody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem;">Loading payments...</td></tr>';
+      
+      try {
+        const response = await apiFetch('/admin/payments');
+        if (!response) return;
+        
+        allPayments = await response.json();
+        renderTable();
+      } catch (err) {
+        console.error('Failed to load payments:', err);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">Failed to load data. See console.</td></tr>';
+      }
+    }
+
+    function renderTable(filterQuery = '') {
+      const tbody = document.getElementById('paymentsTableBody');
+      tbody.innerHTML = '';
+      
+      if (allPayments.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 2rem;">No payment records found.</td></tr>`;
+        return;
+      }
+      
+      const q = filterQuery.toLowerCase();
+      const filtered = allPayments.filter(p => 
+        (p.user_email && p.user_email.toLowerCase().includes(q)) || 
+        (p.user_name && p.user_name.toLowerCase().includes(q)) ||
+        (p.order_id && p.order_id.toLowerCase().includes(q)) ||
+        (p.session_id && p.session_id.toLowerCase().includes(q)) ||
+        (p.service_type && p.service_type.toLowerCase().includes(q))
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 2rem;">No matches found.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach((p) => {
+        const tr = document.createElement('tr');
+        
+        const dateStr = new Date(p.created_at).toLocaleString();
+        const amountStr = `${p.amount} ${p.currency || 'EGP'}`;
+        
+        let statusBadge = '';
+        if (p.status === 'SUCCESS') {
+          statusBadge = `<span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">SUCCESS</span>`;
+        } else if (p.status === 'PENDING') {
+          statusBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">PENDING</span>`;
+        } else {
+          statusBadge = `<span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">${p.status}</span>`;
+        }
+        
+        let serviceBadgeClass = 'badge-primary';
+        if (p.service_type === 'final_report_video') serviceBadgeClass = 'badge-warning';
+        
+        tr.innerHTML = `
+          <td style="white-space: nowrap">${dateStr}</td>
+          <td>
+            <div style="font-weight: 500">${p.user_name || 'N/A'}</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted)">${p.user_email || 'N/A'}</div>
+          </td>
+          <td><code style="background: var(--bg-body); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem">${p.order_id}</code></td>
+          <td><span class="badge ${serviceBadgeClass}">${p.service_type || 'Custom'}</span></td>
+          <td style="font-weight: 600">${amountStr}</td>
+          <td>${statusBadge}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-from app.routes import psychology_router, neuroscience_router, letter_router, astrology_router, comprehensive_router, history_router, admin_router
+from app.routes import psychology_router, neuroscience_router, letter_router, astrology_router, comprehensive_router, history_router, admin_router, payment_router, notifications_router
 from app.auth import auth_router
 from app.database import init_db
 import os
@@ -16,9 +19,9 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-from fastapi.security import OAuth2PasswordBearer
-from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
-from fastapi.openapi.models import OAuthFlowPassword
+
+# ── Rate Limiter ──────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 app = FastAPI(
     title="Mental Health Assessment API",
@@ -27,15 +30,19 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
-    swagger_ui_init_oauth={
-        "usePkceWithAuthorizationCodeGrant": True,
-        "clientId": "your_client_id",
-    },
 )
+
+# ── Rate limit error handler ──────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ── CORS — restrict to configured origins ─────────────────────────────────────
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8081,http://localhost:3000,http://127.0.0.1:8081")
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,6 +56,8 @@ app.include_router(astrology_router)
 app.include_router(comprehensive_router)
 app.include_router(history_router)
 app.include_router(admin_router)
+app.include_router(payment_router)
+app.include_router(notifications_router)
 
 # Serve generated media files (audio/video)
 os.makedirs("videos", exist_ok=True)
@@ -105,4 +114,6 @@ if __name__ == "__main__":
     import uvicorn
     import os
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Note: reload=True should be used for development, but it may cause issues with __name__ == "__main__" block
+    # Actually uvicorn.run("main:app", ...) is better for reload
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
