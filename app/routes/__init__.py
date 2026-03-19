@@ -6,7 +6,6 @@ from .comprehensive import router as comprehensive_router
 from .history import router as history_router
 from .admin import router as admin_router
 from .payment import payment_router
-from .notifications import router as notifications_router
 
 __all__ = [
     "psychology_router",
@@ -16,6 +15,5 @@ __all__ = [
     "comprehensive_router",
     "history_router",
     "admin_router",
-    "payment_router",
-    "notifications_router"
+    "payment_router"
 ]

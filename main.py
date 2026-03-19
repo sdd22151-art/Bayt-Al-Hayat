@@ -7,7 +7,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from app.routes import psychology_router, neuroscience_router, letter_router, astrology_router, comprehensive_router, history_router, admin_router, payment_router, notifications_router
+from app.routes import psychology_router, neuroscience_router, letter_router, astrology_router, comprehensive_router, history_router, admin_router, payment_router
 from app.auth import auth_router
 from app.database import init_db
 import os
@@ -57,7 +57,6 @@ app.include_router(comprehensive_router)
 app.include_router(history_router)
 app.include_router(admin_router)
 app.include_router(payment_router)
-app.include_router(notifications_router)
 
 # Serve generated media files (audio/video)
 os.makedirs("videos", exist_ok=True)
