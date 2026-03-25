@@ -9,6 +9,7 @@ from app.auth.schemas import (
     RegisterResponse,
     LoginRequest,
     LoginResponse,
+    ForgetPasswordRequest,
     ForgetPasswordResponse,
     VerifyResetCodeRequest,
     VerifyResetCodeResponse,
