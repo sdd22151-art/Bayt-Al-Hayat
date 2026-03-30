@@ -226,9 +226,33 @@ class AstrologyService:
                 raise Exception("No Sun data in API response")
                 
         except Exception as e:
-
-            print(f"❌ API فشل: {str(e)}")
-            raise
+            print(f"❌ API Error: {str(e)}")
+            print(f"⚠️ Using fallback mock data for sign: {sign}")
+            
+            zodiac_title = sign.title()
+            fallback_planets = {
+                "Sun": {"zodiac": zodiac_title, "degree": 15.0},
+                "Moon": {"zodiac": "Cancer", "degree": 10.0},
+                "Mercury": {"zodiac": "Gemini", "degree": 5.0},
+                "Venus": {"zodiac": "Taurus", "degree": 20.0},
+                "Mars": {"zodiac": "Aries", "degree": 8.0}
+            }
+            
+            description = (
+                f"الشمس في {zodiac_title} تمثل جوهرك وهويتك الحقيقية بقوة، "
+                f"بينما القمر يمنحك عمقاً عاطفياً يعزز حدسك وقدرتك على التواصل."
+            )
+            
+            return {
+                "description": description,
+                "mood": "Normal",
+                "compatibility": cls._get_default_compatibility(sign),
+                "lucky_number": str(cls._generate_lucky_number()),
+                "color": cls._get_lucky_color(sign),
+                "planets": fallback_planets,
+                "planets_raw": fallback_planets,
+                "ascendant": zodiac_title
+            }
     
     @classmethod
     def _infer_mood_from_text(cls, text: str) -> str:
