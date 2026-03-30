@@ -220,39 +220,60 @@ class AIVideoService:
         """Helper to generate and poll a single video clip concurrently."""
         print(f"🎥 [Scene {scene_idx}] Generating cinematic animation...")
         
-        # Use image-to-video if a valid image reference URL is provided
-        if prompt_image and len(prompt_image.strip()) > 10:
-            print(f"🖼️ [Scene {scene_idx}] Using Image Reference for accuracy: {prompt_image[:30]}...")
-            task = await client.image_to_video.create(
-                model=model,
-                prompt_image=prompt_image.strip(),
-                prompt_text=prompt_text,
-                ratio="1280:720",
-                duration=10
-            )
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Use image-to-video if a valid image reference URL is provided
+                if prompt_image and len(prompt_image.strip()) > 10:
+                    print(f"🖼️ [Scene {scene_idx}] Using Image Reference for accuracy: {prompt_image[:30]}...")
+                    task = await client.image_to_video.create(
+                        model=model,
+                        prompt_image=prompt_image.strip(),
+                        prompt_text=prompt_text,
+                        ratio="1280:720",
+                        duration=10
+                    )
+                else:
+                    print(f"📝 [Scene {scene_idx}] Using Text-to-Video mode.")
+                    task = await client.text_to_video.create(
+                        model=model,
+                        prompt_text=prompt_text,
+                        ratio="1280:720",
+                        duration=10
+                    )
+                # Poll for completion
+                while True:
+                    task = await client.tasks.retrieve(task.id)
+                    if task.status == "SUCCEEDED":
+                        out = task.output
+                        if isinstance(out, list) and len(out) > 0:
+                            return out[0]
+                        elif isinstance(out, dict):
+                            return out.get("video")
+                        return str(out)
+                    elif task.status == "THROTTLED":
+                        print(f"⚠️ [Scene {scene_idx}] Throttled! Retrying create operation (Attempt {attempt+1}/{max_retries})")
+                        break # Break out of polling loop to retry `create`
+                    elif task.status in ["FAILED", "CANCELLED"]:
+                        err = getattr(task, "error", f"Unknown error (Status: {task.status})")
+                        raise Exception(f"Runway Task Failed [Scene {scene_idx}]: {err}")
+                    
+                    await asyncio.sleep(5)
+                
+                # If it didn't break due to THROTTLED, then it's done or errored elsewhere
+                if task.status == "SUCCEEDED":
+                    break
+                    
+            except Exception as e:
+                if "429" in str(e) or "throttle" in str(e).lower():
+                    print(f"⚠️ [Scene {scene_idx}] API Rate Limit (429)! Retrying... (Attempt {attempt+1}/{max_retries})")
+                else:
+                    raise
+                    
+            # If we reached here without returning, we need to retry. Wait before retrying.
+            await asyncio.sleep(10)
         else:
-            print(f"📝 [Scene {scene_idx}] Using Text-to-Video mode.")
-            task = await client.text_to_video.create(
-                model=model,
-                prompt_text=prompt_text,
-                ratio="1280:720",
-                duration=10
-            )
-        # Poll for completion
-        while True:
-            task = await client.tasks.retrieve(task.id)
-            if task.status == "SUCCEEDED":
-                out = task.output
-                if isinstance(out, list) and len(out) > 0:
-                    return out[0]
-                elif isinstance(out, dict):
-                    return out.get("video")
-                return str(out)
-            elif task.status in ["FAILED", "CANCELLED", "THROTTLED"]:
-                err = getattr(task, "error", f"Unknown error (Status: {task.status})")
-                raise Exception(f"Runway Task Failed [Scene {scene_idx}]: {err}")
-            
-            await asyncio.sleep(5)
+            raise Exception(f"Runway Task Failed [Scene {scene_idx}]: Throttled repeatedly, exceeded max retries.")
 
     @classmethod
     async def _download_clip(cls, url: str, path: str) -> str:
@@ -392,9 +413,9 @@ class AIVideoService:
                 from runwayml import AsyncRunwayML
                 client = AsyncRunwayML(api_key=runway_key)
                 
-                # 1. Start generation of all 3 clips concurrently (takes ~2-3 mins total)
-                print("🚀 Launching 3 Runway tasks CONCURRENTLY to save time...")
-                tasks = []
+                # 1. Start generation of all 3 clips concurrently with staggering
+                print("🚀 Launching 3 Runway tasks CONCURRENTLY (Staggered by 5s) to bypass limits...")
+                task_futures = []
                 for i, prompt in enumerate(formatted_prompts):
                     # Determine Which Image to Use Based on Scene
                     scene_img = None
@@ -403,9 +424,11 @@ class AIVideoService:
                     elif i == 1: # Scene 2: Egyptian Neuroscience Symbol
                         scene_img = symbol_data.get("prompt_image", "")
                         
-                    tasks.append(cls._generate_single_clip(client, prompt, i+1, model, scene_img))
+                    task_futures.append(asyncio.create_task(cls._generate_single_clip(client, prompt, i+1, model, scene_img)))
+                    # Stagger by 5 seconds to bypass Runway's concurrent bursts Throttle!
+                    await asyncio.sleep(5)
                 
-                clip_urls = await asyncio.gather(*tasks)
+                clip_urls = await asyncio.gather(*task_futures)
                 
                 print(f"✅ All 3 clips gathered concurrently: {clip_urls}")
 
