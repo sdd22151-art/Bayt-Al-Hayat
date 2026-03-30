@@ -392,9 +392,9 @@ class AIVideoService:
                 from runwayml import AsyncRunwayML
                 client = AsyncRunwayML(api_key=runway_key)
                 
-                # 1. Start generation of all 3 clips sequentially
-                print("🚀 Launching 3 Runway sequential tasks to avoid rate limits...")
-                clip_urls = []
+                # 1. Start generation of all 3 clips concurrently (takes ~2-3 mins total)
+                print("🚀 Launching 3 Runway tasks CONCURRENTLY to save time...")
+                tasks = []
                 for i, prompt in enumerate(formatted_prompts):
                     # Determine Which Image to Use Based on Scene
                     scene_img = None
@@ -403,13 +403,11 @@ class AIVideoService:
                     elif i == 1: # Scene 2: Egyptian Neuroscience Symbol
                         scene_img = symbol_data.get("prompt_image", "")
                         
-                    url = await cls._generate_single_clip(client, prompt, i+1, model, scene_img)
-                    clip_urls.append(url)
-                    # optional delay if needed, but sequential is usually enough
-                    if i < len(formatted_prompts) - 1:
-                        await asyncio.sleep(2)
+                    tasks.append(cls._generate_single_clip(client, prompt, i+1, model, scene_img))
                 
-                print(f"✅ All 3 clips gathered: {clip_urls}")
+                clip_urls = await asyncio.gather(*tasks)
+                
+                print(f"✅ All 3 clips gathered concurrently: {clip_urls}")
 
                 # 2. Download the clips concurrently
                 print("📥 Downloading clips locally...")
