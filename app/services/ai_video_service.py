@@ -350,7 +350,7 @@ class AIVideoService:
         neuro_pattern: Optional[str] = None,
         zodiac_sign: Optional[str] = None,
         avatar: str = "",
-        model: str = "gen4.5",
+        model: str = "gen3a_turbo",
         include_video: bool = True,
         **kwargs
     ) -> Dict[str, Any]:
