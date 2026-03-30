@@ -230,7 +230,7 @@ class AIVideoService:
                         model=model,
                         prompt_image=prompt_image.strip(),
                         prompt_text=prompt_text,
-                        ratio="1280:720",
+                        ratio="16:9",
                         duration=10
                     )
                 else:
@@ -238,7 +238,7 @@ class AIVideoService:
                     task = await client.text_to_video.create(
                         model=model,
                         prompt_text=prompt_text,
-                        ratio="1280:720",
+                        ratio="16:9",
                         duration=10
                     )
                 # Poll for completion
