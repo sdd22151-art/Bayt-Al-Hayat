@@ -138,7 +138,7 @@ async def generate_comprehensive_video(
                 output_dir="videos/comprehensive",
                 neuro_pattern=neuro_pattern,
                 zodiac_sign=zodiac_sign,
-                model="gen4.5"
+                model="gen3a_turbo"
             )
 
         # 4. AI Text Report
